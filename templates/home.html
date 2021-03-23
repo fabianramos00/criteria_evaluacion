@@ -4,60 +4,124 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Repositorios institucionales</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.min.css">
     <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css"
           integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
 </head>
 <body>
-<div class="columns">
-    <div class="column">
-        <div class="container">
-
-            <div class="field">
-                <label class="label">Nombre del repositorio</label>
-                <div class="control">
-                    <input class="input" type="text" placeholder="">
-                </div>
-            </div>
-
-            <div class="field is-grouped">
-                <div class="control">
-                    <button class="button is-link">Submit</button>
-                </div>
-                <div class="control">
-                    <button class="button is-link is-light">Cancel</button>
-                </div>
-            </div>
-
+<div id="visibility-content" class="content">
+    <div class="title">
+        <div>
+            Visibilidad
+        </div>
+        <div class="title__number">
+            1
         </div>
     </div>
-    <div class="column">
-        <div class="card">
-            <header class="card-header">
-                <p class="card-header-title">
-                    Component
-                </p>
-                <button class="card-header-icon" aria-label="more options">
-                    <span class="icon">
-                        <i class="fas fa-angle-down" aria-hidden="true"></i>
-                    </span>
-                </button>
-            </header>
-            <div class="card-content">
-                <div class="content">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus nec iaculis mauris.
-                    <a href="#">@bulmaio</a>. <a href="#">#css</a> <a href="#">#responsive</a>
-                    <br>
-                    <time datetime="2016-1-1">11:09 PM - 1 Jan 2016</time>
-                </div>
+    <div id="visibility" class="row">
+    <form id="repositoryData">
+        <div class="input-wrapper">
+            <label>Nombre repositorio</label>
+            <input class="input custom-input" name="name" type="text" placeholder="Nombre del repositorio">
+        </div>
+        <div class="input-wrapper">
+            <label>Enlace repositorio</label>
+            <input class="input custom-input" name="link" type="text" placeholder="Enlace del repositorio">
+        </div>
+        <button class="next-btn submit" type="submit">
+            Evaluar
+        </button>
+    </form>
+        <div>
+            <p>Presencia en recolectores nacionales</p>
+            (SNRD - BDU2)
+            <div class="control">
+                <label class="radio">
+                    <input type="radio" name="total">
+                    Sí (total)
+                </label>
+                <label class="radio">
+                    <input type="radio" name="partial">
+                    Sí (parcial)
+                </label>
+                <label class="radio">
+                    <input type="radio" name="no">
+                    No
+                </label>
             </div>
-            <footer class="card-footer">
-                <a href="#" class="card-footer-item">Save</a>
-                <a href="#" class="card-footer-item">Edit</a>
-                <a href="#" class="card-footer-item">Delete</a>
-            </footer>
         </div>
     </div>
+    <button class="next-btn" onclick="openPolicy()">
+        Continuar
+    </button>
+</div>
+<div id="policy-content" class="content hide">
+    <div class="title">
+        <div>
+            Políticas
+        </div>
+        <div class="title__number">
+            2
+        </div>
+    </div>
+    <form id="policy-data">
+        <div id="policy" class="columns is-multiline">
+        </div>
+        <button class="next-btn">
+            Finalizar
+        </button>
+    </form>
 </div>
 </body>
+<script
+  src="https://code.jquery.com/jquery-3.6.0.js"
+  integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk="
+  crossorigin="anonymous"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/policyOptions.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='js/visibilityOptions.js') }}"></script>
+<script>
+    policyVisibility();
+
+    $(function () {
+        $('#repositoryData').on('submit', function (event) {
+            event.preventDefault();
+            console.log($('#repositoryData').serialize())
+        })
+    })
+
+    function openPolicy() {
+        $('#visibility-content').addClass('hide');
+        $('#policy-content').removeClass('hide');
+    }
+
+    function policyVisibility() {
+        policyOptions.forEach(item => {
+            const $option = $("<div class='column is-half option-card'></div>");
+            const title = `<p>${item.topic}</p>`;
+            $option.append(title);
+
+            const $options = $("<div class='control'></div>");
+            item.options.forEach(opt => {
+                const radio = `
+                    <label class="radio">
+                        <input type="radio" name="${opt.id}" value="${opt.value}"> ${opt.label}
+                    </label>`;
+                $options.append(radio);
+            });
+
+            $option.append($options);
+            $('#policy').append($option);
+
+        })
+    }
+
+    $(function () {
+        $('#policy-data').on('submit', function (event) {
+            event.preventDefault();
+            console.log($('#policy-data').serialize())
+        })
+    })
+
+</script>
 </html>

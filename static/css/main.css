@@ -1,0 +1,104 @@
+:root {
+    --padding: 50px;
+    --border-radius: 10px;
+    --main-color: #3c6073;
+}
+
+body {
+    width: 100vw;
+    height: 100vh;
+    padding: var(--padding);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.content {
+    background-color: var(--main-color);
+    padding: var(--padding);
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 60vw;
+    min-width: 400px;
+    border-radius: var(--border-radius);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.title {
+    background-color: white;
+    position: relative;
+    left: -50px;
+    display: flex;
+    align-items: center;
+    padding: 5px 20px;
+    border-top-right-radius: 30px;
+    border-bottom-right-radius: 30px;
+}
+
+.title > div {
+    margin: 0 20px 0 0;
+}
+
+.title__number {
+    background-color: var(--main-color);
+    width: 40px;
+    height: 40px;
+    border-radius: 30px;
+    text-align: center;
+    color: white;
+}
+
+.option-card {
+}
+
+.next-btn {
+    background-color: white;
+    align-self: flex-end;
+    cursor: pointer;
+    padding: 10px 20px;
+    border-radius: 5px;
+    border: none;
+    outline: none;
+    float: right;
+    margin-left: 10px;
+    margin-top: 20px;
+}
+
+.next-btn:hover {
+    opacity: 0.9;
+}
+
+.next-btn:active {
+    transform: scale(0.98);
+}
+
+.hide {
+    display: none;
+}
+
+.custom-input {
+    width: 50% !important;
+    min-width: 300px;
+    margin: 10px;
+}
+
+.input-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.submit {
+    width: 94%;
+    float: none;
+}
+
+.row {
+    display: flex;
+    justify-content: space-evenly;
+    width: 100%;
+}
