@@ -1,5 +1,5 @@
 import platform
-import subprocess
+from subprocess import call
 import json
 from os.path import exists
 from uuid import uuid4
@@ -9,16 +9,19 @@ from requests import get
 
 def ping(host):
     host = host.replace('https://', '').replace('http://', '')
-    try:
-        param = '-n' if platform.system().lower() == 'windows' else '-c'
-        check_output(
-            ['ping', param, '3', host],
-            stderr=STDOUT,
-            universal_newlines=True
-        )
-        return True
-    except CalledProcessError:
-        return False
+    param = '-n' if platform.system().lower() == 'windows' else '-c'
+    command = ['ping', param, '1', host]
+    return call(command) == 0
+    # try:
+    #     param = '-n' if platform.system().lower() == 'windows' else '-c'
+    #     check_output(
+    #         ['ping', param, '3', host],
+    #         stderr=STDOUT,
+    #         universal_newlines=True
+    #     )
+    #     return True
+    # except CalledProcessError:
+    #     return False
 
 def check_website(url):
     response = get(url)
