@@ -9,16 +9,16 @@ from scripts.visibility import *
 from scripts.policy import *
 from scripts.legal_aspects import *
 from scripts.metadata import *
-
 from scripts.forms import RegistrationForm, VisibilityForm, PolicyForm, LegalAspectsForm, MetadataForm
 from scripts.tools import generate_token, ping, save_dict, load_dict
+from models.models import db
 
 app = Flask(__name__)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = config('DATABASE_URL')
 # app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///db.sqlite3'
-db = SQLAlchemy(app)
+db.init_app(app)
 
 @app.route('/', methods=['POST'])
 def home():

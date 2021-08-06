@@ -6,7 +6,6 @@ from xml.etree.ElementTree import fromstring
 from bs4 import BeautifulSoup
 from requests import get
 from models.models import OAI_PMH, ROAR
-from scripts.tools import load_dict
 
 def open_doar(repository_name):
     URL_OPEN_DOAR = f'https://v2.sherpa.ac.uk/cgi/retrieve?item-type=repository&api-key=0FCFE154-080F-11EB-8A17-20EB1577CA68&format=Json&filter=[["name","contains word","{repository_name}"]]&limit=4'
