@@ -60,7 +60,6 @@ def check_format(format_content):
     return None
 
 def check_version_format(metadata):
-    print('-'*10)
     if metadata is not None:
         values = []
         for i in metadata:

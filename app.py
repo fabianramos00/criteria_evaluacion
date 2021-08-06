@@ -1,11 +1,14 @@
+from os.path import exists
+
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask import request
+from decouple import config
+
 from scripts.visibility import *
 from scripts.policy import *
 from scripts.legal_aspects import *
 from scripts.metadata import *
-from flask import request
-from os.path import exists
 
 from scripts.forms import RegistrationForm, VisibilityForm, PolicyForm, LegalAspectsForm, MetadataForm
 from scripts.tools import generate_token, ping, save_dict, load_dict
@@ -13,7 +16,7 @@ from scripts.tools import generate_token, ping, save_dict, load_dict
 app = Flask(__name__)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+mysqlconnector://root:root1@localhost/criteria'
+app.config['SQLALCHEMY_DATABASE_URI'] = config('DATABASE_URL')
 # app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///db.sqlite3'
 db = SQLAlchemy(app)
 
@@ -96,7 +99,6 @@ def metadata(token):
     # save_dict(token, data)
     # result['accumulative'] = data['total']
     return result, 200
-    # return {'result': result}, 200
 
 if __name__ == '__main__':
     app.run(debug=True)
