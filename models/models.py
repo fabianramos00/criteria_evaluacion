@@ -1,4 +1,4 @@
-from app import db
+from main import db
 
 class OAI_PMH(db.Model):
     __tablename__ = 'OAI_PMH'
