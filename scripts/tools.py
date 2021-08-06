@@ -9,19 +9,17 @@ from requests import get
 
 def ping(host):
     host = host.replace('https://', '').replace('http://', '')
-    param = '-n' if platform.system().lower() == 'windows' else '-c'
-    command = ['ping', param, '1', host]
-    return call(command) == 0
-    # try:
-    #     param = '-n' if platform.system().lower() == 'windows' else '-c'
-    #     check_output(
-    #         ['ping', param, '3', host],
-    #         stderr=STDOUT,
-    #         universal_newlines=True
-    #     )
-    #     return True
-    # except CalledProcessError:
-    #     return False
+    try:
+        param = '-n' if platform.system().lower() == 'windows' else '-c'
+        check_output(
+            ['ping', param, '3', host],
+            stderr=STDOUT,
+            universal_newlines=True,
+            shell=False
+        )
+        return True
+    except CalledProcessError:
+        return False
 
 def check_website(url):
     response = get(url)
