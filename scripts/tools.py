@@ -1,25 +1,31 @@
-import platform
-from subprocess import call
 import json
 from os.path import exists
 from uuid import uuid4
-from subprocess import check_output, CalledProcessError, STDOUT
+# from subprocess import check_output, CalledProcessError, STDOUT
 
 from requests import get
+from requests.exceptions import ConnectionError
 
 def ping(host):
-    host = host.replace('https://', '').replace('http://', '')
     try:
-        param = '-n' if platform.system().lower() == 'windows' else '-c'
-        check_output(
-            ['ping', param, '3', host],
-            stderr=STDOUT,
-            universal_newlines=True,
-            shell=False
-        )
+        request = get(host)
         return True
-    except CalledProcessError:
+    except ConnectionError:
         return False
+
+# def ping(host):
+    # host = host.replace('https://', '').replace('http://', '')
+    # try:
+    #     param = '-n' if platform.system().lower() == 'windows' else '-c'
+    #     check_output(
+    #         ['ping', param, '3', host],
+    #         stderr=STDOUT,
+    #         universal_newlines=True,
+    #         shell=False
+    #     )
+    #     return True
+    # except CalledProcessError:
+    #     return False
 
 def check_website(url):
     response = get(url)
