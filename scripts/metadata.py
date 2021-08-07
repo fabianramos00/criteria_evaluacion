@@ -1,12 +1,14 @@
 from datetime import datetime
 
 from bs4 import BeautifulSoup
+from iso639 import languages
 from requests import get
+from re import compile
 
-metadata_fields = ['DC.creator', 'DC.title', 'DC.type', 'DC.date', 'DC.rights', 'DC.description', 'DC.format',
+metadata_fields = ['DC.creator', 'DC.title', 'DC.type', 'DC.rights', 'DC.description', 'DC.format',
                    'DC.language', 'DC.identifier', 'DC.subject', 'DC.contributor', 'DC.relation', 'DC.publisher']
 fields_item = ['standard_access_value', 'standard_date_format', 'standard_type_research_result',
-               'single_type_research_result', 'standard_format', 'standard_version_coar', 'single_version']
+               'single_type_research_result', 'standard_format', 'standard_version_coar', 'single_version', 'standard_language']
 
 access_standard_values = ['closedAccess', 'embargoedAccess', 'openAccess', 'restrictedAccess']
 result_types = ['article', 'bachelorThesis', 'masterThesis', 'doctoralThesis', 'book', 'bookPart', 'review',
@@ -23,14 +25,22 @@ format_dict = {
     'video': ['mpeg1', 'mpeg2', 'mpeg3', 'av']
 }
 
-def check_date_format(date_str):
-    if date_str is not None:
-        try:
-            datetime.strptime(date_str, '%Y-%m-%d')
-            return date_str
-        except ValueError:
-            return None
-    return None
+def check_metadata_date(page_parse):
+    date_regex, date_formats, date_dict = [r'DC.date.*', r'DCTERMS.date.*'], ['%Y-%m-%d', '%Y-%m-%dT%H:%M:%SZ'], {}
+    standard_date_format = True
+    for regex in date_regex:
+        metadata_date = page_parse.find_all('meta', {'name': compile(regex)})
+        for i in metadata_date:
+            date_dict[i['name']] = i['content']
+            if standard_date_format:
+                standard_date_format = False
+                for x in date_formats:
+                    try:
+                        datetime.strptime(i['content'], x)
+                        standard_date_format = True
+                    except ValueError:
+                        pass
+    return (date_dict if date_dict else None), (standard_date_format if standard_date_format else None)
 
 def check_access_name(name_list):
     if name_list is not None:
@@ -70,6 +80,17 @@ def check_version_format(metadata):
         return values if 0 < len(values) else None
     return None
 
+def check_language_format(language_value):
+    if language_value is not None:
+        iso_list = [('part3', 'ISO 639-3'), ('part2b', 'ISO 639-2'), ('part2t', 'ISO 639-2'), ('part1', 'ISO 639-1')]
+        for i, j in iso_list:
+            try:
+                languages.get(**{i: language_value})
+                return j
+            except KeyError:
+                pass
+    return None
+
 def get_metadata(url_dict):
     page = get(url_dict['url'])
     page_parse = BeautifulSoup(page.content, 'html.parser')
@@ -82,17 +103,18 @@ def get_metadata(url_dict):
             metadata[name] = [i['content'] for i in meta_list]
     url_dict.update({
         'standard_access_value': check_access_name(metadata['DC.rights']),
-        'standard_date_format': check_date_format(metadata['DC.date']),
         'standard_type_research_result': check_types_research_result(metadata['DC.type']),
         'standard_format': check_format(metadata['DC.format']),
-        'standard_version_coar': check_version_format(metadata['DC.type'])
+        'standard_version_coar': check_version_format(metadata['DC.type']),
+        'standard_language': check_language_format(metadata['DC.language'])
     })
+    metadata['DC.date'], url_dict['standard_date_format'] = check_metadata_date(page_parse)
     url_dict['single_type_research_result'] = url_dict['standard_type_research_result'][0] if url_dict[
-                                                                                       'standard_type_research_result'] is not None and len(
+                                                                                                  'standard_type_research_result'] is not None and len(
         url_dict[
             'standard_type_research_result']) == 1 else None
     url_dict['single_version'] = url_dict['standard_version_coar'][0] if url_dict[
-                                                                               'standard_version_coar'] is not None and len(
+                                                                             'standard_version_coar'] is not None and len(
         url_dict['standard_version_coar']) == 1 else None
     url_dict['metadata'] = metadata
     return url_dict
@@ -100,6 +122,7 @@ def get_metadata(url_dict):
 def validate_metadata(url_dict_list):
     fields_metadata_dict, fields_dict = {}, {}
     fields_metadata, item_fields = metadata_fields.copy(), fields_item.copy()
+    fields_metadata.append('DC.date')
     for i in fields_metadata:
         fields_metadata_dict[i] = True
     for i in item_fields:
