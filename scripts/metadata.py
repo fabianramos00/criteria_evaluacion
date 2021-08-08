@@ -8,7 +8,7 @@ from re import compile
 metadata_fields = ['DC.creator', 'DC.title', 'DC.type', 'DC.rights', 'DC.description', 'DC.format',
                    'DC.language', 'DC.identifier', 'DC.subject', 'DC.contributor', 'DC.relation', 'DC.publisher']
 fields_item = ['standard_access_value', 'standard_date_format', 'standard_type_research_result',
-               'single_type_research_result', 'standard_format', 'standard_version_coar', 'single_version', 'standard_language']
+               'single_type_research_result', 'standard_format', 'standard_version_coar', 'single_version', 'standard_language', 'dublin_core']
 
 access_standard_values = ['closedAccess', 'embargoedAccess', 'openAccess', 'restrictedAccess']
 result_types = ['article', 'bachelorThesis', 'masterThesis', 'doctoralThesis', 'book', 'bookPart', 'review',
@@ -89,6 +89,8 @@ def check_language_format(language_value):
                 return j
             except KeyError:
                 pass
+        if 'zxx' == language_value:
+            return 'zxx'
     return None
 
 def get_metadata(url_dict):
@@ -102,6 +104,7 @@ def get_metadata(url_dict):
         else:
             metadata[name] = [i['content'] for i in meta_list]
     url_dict.update({
+        'dublin_core': True if 0 < len(page_parse.find_all('meta', {'name': compile(r'DC..*')})) else None,
         'standard_access_value': check_access_name(metadata['DC.rights']),
         'standard_type_research_result': check_types_research_result(metadata['DC.type']),
         'standard_format': check_format(metadata['DC.format']),
@@ -162,8 +165,7 @@ def execute_metadata(form, link_list):
                                                                 'DC.identifier', 'DC.subject', 'DC.contributor',
                                                                 'DC.relation', 'DC.publisher'])
     metadata_resume.update(result_fields)
-    metadata_resume['resume'] = new_link_list
-    # metadata_resume['total'] = sum(
-    #     metadata_resume[i]['value'] if dict == type(metadata_resume[i]) else metadata_resume[i] for i in
-    #     metadata_resume)
-    return metadata_resume
+    metadata_resume['total'] = sum(
+        metadata_resume[i]['value'] if dict == type(metadata_resume[i]) else metadata_resume[i] for i in
+        metadata_resume)
+    return metadata_resume, new_link_list

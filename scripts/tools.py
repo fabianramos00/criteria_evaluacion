@@ -48,3 +48,15 @@ def generate_token():
         if not exists(f'./data/{token}.json'):
             flag = False
     return token
+
+def format_response(result_dict):
+    for i in result_dict:
+        if type(result_dict[i]) == dict:
+            if 'text' in result_dict[i]:
+                result_dict[i] = {
+                    'text': result_dict[i]['text'],
+                    'value': result_dict[i]['value'],
+                }
+            elif 'url' in result_dict[i]:
+                result_dict[i] = result_dict[i]['value']
+    return result_dict
