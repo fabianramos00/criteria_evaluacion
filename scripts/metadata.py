@@ -111,6 +111,7 @@ def get_metadata(url_dict):
         'standard_version_coar': check_version_format(metadata['DC.type']),
         'standard_language': check_language_format(metadata['DC.language'])
     })
+
     metadata['DC.date'], url_dict['standard_date_format'] = check_metadata_date(page_parse)
     url_dict['single_type_research_result'] = url_dict['standard_type_research_result'][0] if url_dict[
                                                                                                   'standard_type_research_result'] is not None and len(

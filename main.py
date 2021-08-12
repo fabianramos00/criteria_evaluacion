@@ -3,24 +3,32 @@ from os.path import exists
 from functools import wraps
 from flask import Flask
 from flask import request
+from flask_cors import CORS
 from decouple import config
 
 from scripts.visibility import *
 from scripts.policy import *
 from scripts.legal_aspects import *
 from scripts.metadata import *
-from scripts.forms import RegistrationForm, VisibilityForm, PolicyForm, LegalAspectsForm, MetadataForm
+from scripts.interoperability import *
+from scripts.security import *
+from scripts.statistics import *
+from scripts.services import *
+from scripts.forms import RegistrationForm, VisibilityForm, PolicyForm, LegalAspectsForm, MetadataForm, SecurityForm, \
+    InteroperabilityForm, StatisticsForm, ServicesForm
 from scripts.tools import generate_token, ping, save_dict, load_dict, format_response
 from models.models import db
 
 app = Flask(__name__)
+CORS(app)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = config('DATABASE_URL')
 # app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///db.sqlite3'
 db.init_app(app)
 
-criteria_list = ['visibility', 'policy', 'legal_aspects', 'metadata']
+criteria_list = ['visibility', 'policy', 'legal_aspects', 'metadata', 'interoperability', 'security', 'statistics',
+                 'services']
 
 def token_required(f):
     @wraps(f)
@@ -32,9 +40,10 @@ def token_required(f):
         data = load_dict(path_list[-1])
         if item in data:
             return {'error': 'El ítem ya fue evaluado'}, 406
-        elif item != criteria_list[0] and criteria_list[criteria_list.index(item)-1] not in data:
-            return {'error': 'No se ha evaluado el ítem previo'}, 406
+        # elif item != criteria_list[0] and criteria_list[criteria_list.index(item) - 1] not in data:
+        #     return {'error': 'No se ha evaluado el ítem previo'}, 406
         return f(*args, **kwargs)
+
     return decorated_function
 
 def save_result(token, data, result, item):
@@ -103,8 +112,55 @@ def metadata(token):
         return metadata_form.errors, 400
     data = load_dict(token)
     result, links = execute_metadata(metadata_json, data['links'])
-    data['links'] =  links
+    data['links'] = links
     return save_result(token, data, result, 'metadata'), 200
+
+@app.route('/interoperability/<token>', methods=['POST'])
+@token_required
+def interoperability(token):
+    data = load_dict(token)
+    interoperability_form = InteroperabilityForm.from_json(request.json)
+    if not interoperability_form.validate():
+        return interoperability_form.errors, 400
+    result = execute_interoperability(request.json, data['visibility'])
+    return save_result(token, data, result, 'interoperability'), 200
+
+@app.route('/security/<token>', methods=['POST'])
+@token_required
+def security(token):
+    data = load_dict(token)
+    request_dict = request.json
+    request_dict.update({'url': data['repository_url']})
+    security_form = SecurityForm.from_json(request_dict)
+    if not security_form.validate():
+        return security_form.errors, 400
+    result = execute_security(request_dict)
+    return save_result(token, data, result, 'security'), 200
+
+@app.route('/statistics/<token>', methods=['POST'])
+@token_required
+def statistics(token):
+    data = load_dict(token)
+    request_dict = request.json
+    request_dict.update({'url': data['repository_url']})
+    statistics_form = StatisticsForm.from_json(request_dict)
+    if not statistics_form.validate():
+        return statistics_form.errors, 400
+    result, links_dict = execute_statistics(request_dict, data['links'])
+    data['links'] = links_dict
+    return save_result(token, data, result, 'statistics'), 200
+
+@app.route('/services/<token>', methods=['POST'])
+@token_required
+def services(token):
+    data = load_dict(token)
+    request_dict = request.json
+    request_dict.update({'url': data['repository_url']})
+    services_form = ServicesForm.from_json(request_dict)
+    if not services_form.validate():
+        return services_form.errors, 400
+    result = execute_services(request_dict, data)
+    return save_result(token, data, result, 'services'), 200
 
 if __name__ == '__main__':
     app.run(debug=True)

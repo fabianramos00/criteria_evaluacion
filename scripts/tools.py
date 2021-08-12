@@ -60,3 +60,19 @@ def format_response(result_dict):
             elif 'url' in result_dict[i]:
                 result_dict[i] = result_dict[i]['value']
     return result_dict
+
+def count_form_boolean_fields(dict_form):
+    if 'url' in dict_form:
+        del dict_form['url']
+    print(dict_form)
+    field_list_url = [x for x in dict_form if '_url' not in x and x + '_url' in dict_form]
+    field_list = [x for x in dict_form if '_url' not in x and x + '_url' not in dict_form]
+    resume = {}
+    for i in field_list_url:
+        resume[i] = {
+            'value': 1 if dict_form[i] else 0,
+            'url': dict_form[i + '_url'] if dict_form[i] else None
+        }
+    for i in field_list:
+        resume[i] = 1 if dict_form[i] else 0
+    return resume
