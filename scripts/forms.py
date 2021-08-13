@@ -112,6 +112,9 @@ class LegalAspectsForm(Form):
 
 class MetadataForm(Form):
     curation = BooleanField(validators=[boolean_required])
+    classification_system = BooleanField(validators=[boolean_required])
+    metadata_schema = BooleanField(validators=[boolean_required])
+    metadata_export = BooleanField(validators=[boolean_required])
 
 class InteroperabilityForm(Form):
     deleted_records = BooleanField(validators=[boolean_required])

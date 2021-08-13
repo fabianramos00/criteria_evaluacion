@@ -5,10 +5,13 @@ from iso639 import languages
 from requests import get
 from re import compile
 
+from scripts.tools import count_form_boolean_fields
+
 metadata_fields = ['DC.creator', 'DC.title', 'DC.type', 'DC.rights', 'DC.description', 'DC.format',
                    'DC.language', 'DC.identifier', 'DC.subject', 'DC.contributor', 'DC.relation', 'DC.publisher']
 fields_item = ['standard_access_value', 'standard_date_format', 'standard_type_research_result',
-               'single_type_research_result', 'standard_format', 'standard_version_coar', 'single_version', 'standard_language', 'dublin_core']
+               'single_type_research_result', 'standard_format', 'standard_version_coar', 'single_version',
+               'standard_language', 'dublin_core', 'author_id']
 
 access_standard_values = ['closedAccess', 'embargoedAccess', 'openAccess', 'restrictedAccess']
 result_types = ['article', 'bachelorThesis', 'masterThesis', 'doctoralThesis', 'book', 'bookPart', 'review',
@@ -93,6 +96,22 @@ def check_language_format(language_value):
             return 'zxx'
     return None
 
+def check_author_id(author_value):
+    if author_value is not None:
+        if type(author_value) == list:
+            for i in author_value:
+                if 'https://www.iralis.org/' in i or 'https://orcid.org/' in i:
+                    pass
+                else:
+                    return None
+            return 'ORCID/IraLIS'
+        else:
+            if 'https://www.iralis.org/' in author_value:
+                return 'IraLIS'
+            if 'https://orcid.org/' in author_value:
+                return 'ORCID'
+    return None
+
 def get_metadata(url_dict):
     page = get(url_dict['url'])
     page_parse = BeautifulSoup(page.content, 'html.parser')
@@ -103,15 +122,17 @@ def get_metadata(url_dict):
             metadata[name] = meta_list[0]['content'] if 1 == len(meta_list) else None
         else:
             metadata[name] = [i['content'] for i in meta_list]
+    meta_identifier = page_parse.find_all('meta', {'name': 'DC.identifier', 'scheme': 'DCTERMS.URI'})
+    metadata['DC.identifier'] = meta_identifier[0]['content'] if 1 == len(meta_identifier) else None
     url_dict.update({
         'dublin_core': True if 0 < len(page_parse.find_all('meta', {'name': compile(r'DC..*')})) else None,
         'standard_access_value': check_access_name(metadata['DC.rights']),
         'standard_type_research_result': check_types_research_result(metadata['DC.type']),
         'standard_format': check_format(metadata['DC.format']),
         'standard_version_coar': check_version_format(metadata['DC.type']),
-        'standard_language': check_language_format(metadata['DC.language'])
+        'standard_language': check_language_format(metadata['DC.language']),
+        'author_id': check_author_id(metadata['DC.creator'])
     })
-
     metadata['DC.date'], url_dict['standard_date_format'] = check_metadata_date(page_parse)
     url_dict['single_type_research_result'] = url_dict['standard_type_research_result'][0] if url_dict[
                                                                                                   'standard_type_research_result'] is not None and len(
@@ -153,9 +174,7 @@ def evaluate_metadata_group(metadata_dict, fields):
     return new_dict
 
 def execute_metadata(form, link_list):
-    metadata_resume = {
-        'curation': 1 if form['curation'] else 0
-    }
+    metadata_resume = count_form_boolean_fields(form)
     new_link_list = [get_metadata(x) for x in link_list]
     result_metadata, result_fields = validate_metadata(new_link_list)
     metadata_resume['first_fields'] = evaluate_metadata_group(result_metadata,

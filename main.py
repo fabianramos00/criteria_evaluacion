@@ -40,10 +40,9 @@ def token_required(f):
         data = load_dict(path_list[-1])
         if item in data:
             return {'error': 'El ítem ya fue evaluado'}, 406
-        # elif item != criteria_list[0] and criteria_list[criteria_list.index(item) - 1] not in data:
-        #     return {'error': 'No se ha evaluado el ítem previo'}, 406
+        elif item != criteria_list[0] and criteria_list[criteria_list.index(item) - 1] not in data:
+            return {'error': 'No se ha evaluado el ítem previo'}, 406
         return f(*args, **kwargs)
-
     return decorated_function
 
 def save_result(token, data, result, item):
@@ -122,7 +121,7 @@ def interoperability(token):
     interoperability_form = InteroperabilityForm.from_json(request.json)
     if not interoperability_form.validate():
         return interoperability_form.errors, 400
-    result = execute_interoperability(request.json, data['visibility'])
+    result = execute_interoperability(request.json, data)
     return save_result(token, data, result, 'interoperability'), 200
 
 @app.route('/security/<token>', methods=['POST'])
