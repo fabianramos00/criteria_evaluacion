@@ -7,7 +7,7 @@ from scripts.tools import count_form_boolean_fields
 
 def boai(repository_name):
     URL_BOAI = f'https://www.budapestopenaccessinitiative.org/list_signatures?indorg=all&keyword={repository_name}'
-    page_boai = get(URL_BOAI)
+    page_boai = get(URL_BOAI, verify=False)
     page_parser_boai = BeautifulSoup(page_boai.content.decode('utf-8'), 'html.parser')
     for i in page_parser_boai.find('div', attrs={'id': 'search-signatures'}).find_all('tr'):
         if 0.85 < SequenceMatcher(None, i.find_all('td')[0].text, repository_name).ratio():

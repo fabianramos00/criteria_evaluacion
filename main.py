@@ -5,6 +5,8 @@ from flask import Flask
 from flask import request
 from flask_cors import CORS
 from decouple import config
+from urllib3 import disable_warnings
+from urllib3.exceptions import InsecureRequestWarning
 
 from scripts.visibility import *
 from scripts.policy import *
@@ -18,6 +20,8 @@ from scripts.forms import RegistrationForm, VisibilityForm, PolicyForm, LegalAsp
     InteroperabilityForm, StatisticsForm, ServicesForm
 from scripts.tools import generate_token, ping, save_dict, load_dict, format_response
 from models.models import db
+
+disable_warnings(InsecureRequestWarning)
 
 app = Flask(__name__)
 CORS(app)
@@ -49,7 +53,7 @@ def save_result(token, data, result, item):
     data.update({item: result})
     data['total'] += result['total']
     save_dict(token, data)
-    result['accumulative'] = result['total']
+    result['accumulative'] = data['total']
     return format_response(result)
 
 @app.route('/', methods=['POST'])
@@ -150,7 +154,7 @@ def statistics(token):
     return save_result(token, data, result, 'statistics'), 200
 
 @app.route('/services/<token>', methods=['POST'])
-@token_required
+# @token_required
 def services(token):
     data = load_dict(token)
     request_dict = request.json
@@ -158,8 +162,9 @@ def services(token):
     services_form = ServicesForm.from_json(request_dict)
     if not services_form.validate():
         return services_form.errors, 400
-    result = execute_services(request_dict, data)
-    return save_result(token, data, result, 'services'), 200
+    result = execute_services(request_dict, data['links'])
+    return result, 200
+    # return save_result(token, data, result, 'services'), 200
 
 if __name__ == '__main__':
     app.run(debug=True)

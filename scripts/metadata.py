@@ -27,6 +27,8 @@ format_dict = {
     'audio': ['wav', 'mp3', 'quicktime'],
     'video': ['mpeg1', 'mpeg2', 'mpeg3', 'av']
 }
+bibliographic_managers = ['mendeley', 'zotero']
+metadata_export_types = ['mets', 'premis', 'rdf', 'json', 'marc', 'bibtex']
 
 def check_metadata_date(page_parse):
     date_regex, date_formats, date_dict = [r'DC.date.*', r'DCTERMS.date.*'], ['%Y-%m-%d', '%Y-%m-%dT%H:%M:%SZ'], {}
@@ -112,8 +114,27 @@ def check_author_id(author_value):
                 return 'ORCID'
     return None
 
+def search_items(items, page):
+    result = {i: None for i in items}
+    links, value, items = page.find_all('a'), None, items.copy()
+    for a in links:
+        img_item = a.find('img')
+        for i in items:
+            if a.has_attr('href') and i in a['href']:
+                value = a['href']
+            elif i in a.text.lower():
+                value = a.text
+            elif img_item is not None and i in img_item['src']:
+                value = img_item['src']
+            if value is not None:
+                result[i] = value
+                items.remove(i)
+                value = None
+                break
+    return result
+
 def get_metadata(url_dict):
-    page = get(url_dict['url'])
+    page = get(url_dict['url'], verify=False)
     page_parse = BeautifulSoup(page.content, 'html.parser')
     metadata = {}
     for name in metadata_fields:
@@ -131,7 +152,9 @@ def get_metadata(url_dict):
         'standard_format': check_format(metadata['DC.format']),
         'standard_version_coar': check_version_format(metadata['DC.type']),
         'standard_language': check_language_format(metadata['DC.language']),
-        'author_id': check_author_id(metadata['DC.creator'])
+        'author_id': check_author_id(metadata['DC.creator']),
+        'bibliographic_managers': search_items(bibliographic_managers, page_parse),
+        'metadata_exports': search_items(metadata_export_types, page_parse)
     })
     metadata['DC.date'], url_dict['standard_date_format'] = check_metadata_date(page_parse)
     url_dict['single_type_research_result'] = url_dict['standard_type_research_result'][0] if url_dict[

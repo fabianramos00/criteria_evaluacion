@@ -8,7 +8,7 @@ from requests.exceptions import ConnectionError
 
 def ping(host):
     try:
-        request = get(host)
+        request = get(host, verify=False)
         return True
     except ConnectionError:
         return False
@@ -28,7 +28,7 @@ def ping(host):
     #     return False
 
 def check_website(url):
-    response = get(url)
+    response = get(url, verify=False)
     return True if response.status_code == 200 else False
 
 def save_dict(token, data):
