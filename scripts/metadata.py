@@ -29,6 +29,7 @@ format_dict = {
 }
 bibliographic_managers = ['mendeley', 'zotero']
 metadata_export_types = ['mets', 'premis', 'rdf', 'json', 'marc', 'bibtex']
+social_networks = ['facebook', 'twitter', 'linkedin']
 
 def check_metadata_date(page_parse):
     date_regex, date_formats, date_dict = [r'DC.date.*', r'DCTERMS.date.*'], ['%Y-%m-%d', '%Y-%m-%dT%H:%M:%SZ'], {}
@@ -154,7 +155,8 @@ def get_metadata(url_dict):
         'standard_language': check_language_format(metadata['DC.language']),
         'author_id': check_author_id(metadata['DC.creator']),
         'bibliographic_managers': search_items(bibliographic_managers, page_parse),
-        'metadata_exports': search_items(metadata_export_types, page_parse)
+        'metadata_exports': search_items(metadata_export_types, page_parse),
+        'social_networks': search_items(social_networks, page_parse)
     })
     metadata['DC.date'], url_dict['standard_date_format'] = check_metadata_date(page_parse)
     url_dict['single_type_research_result'] = url_dict['standard_type_research_result'][0] if url_dict[

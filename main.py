@@ -52,7 +52,7 @@ def token_required(f):
 def save_result(token, data, result, item):
     data.update({item: result})
     data['total'] += result['total']
-    save_dict(token, data)
+    # save_dict(token, data)
     result['accumulative'] = data['total']
     return format_response(result)
 
@@ -163,8 +163,7 @@ def services(token):
     if not services_form.validate():
         return services_form.errors, 400
     result = execute_services(request_dict, data['links'])
-    return result, 200
-    # return save_result(token, data, result, 'services'), 200
+    return save_result(token, data, result, 'services'), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
