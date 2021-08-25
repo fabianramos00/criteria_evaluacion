@@ -42,9 +42,9 @@ def token_required(f):
         if not exists(f'./data/{token}.json'):
             return {'error': 'Token inválido'}, 406
         data = load_dict(path_list[-1])
-        if item in data:
-            return {'error': 'El ítem ya fue evaluado'}, 406
-        elif item != criteria_list[0] and criteria_list[criteria_list.index(item) - 1] not in data:
+        # if item in data:
+        #     return {'error': 'El ítem ya fue evaluado'}, 406
+        if item != criteria_list[0] and criteria_list[criteria_list.index(item) - 1] not in data:
             return {'error': 'No se ha evaluado el ítem previo'}, 406
         return f(*args, **kwargs)
     return decorated_function
@@ -52,7 +52,7 @@ def token_required(f):
 def save_result(token, data, result, item):
     data.update({item: result})
     data['total'] += result['total']
-    # save_dict(token, data)
+    save_dict(token, data)
     result['accumulative'] = data['total']
     return format_response(result)
 
@@ -154,7 +154,7 @@ def statistics(token):
     return save_result(token, data, result, 'statistics'), 200
 
 @app.route('/services/<token>', methods=['POST'])
-# @token_required
+@token_required
 def services(token):
     data = load_dict(token)
     request_dict = request.json
@@ -164,6 +164,19 @@ def services(token):
         return services_form.errors, 400
     result = execute_services(request_dict, data['links'])
     return save_result(token, data, result, 'services'), 200
+
+@app.route('/<item>/<token>', methods=['GET'])
+def get_data(item, token):
+    if item not in criteria_list:
+        return {'error': 'Item inválido'}, 400
+    if not exists(f'./data/{token}.json'):
+        return {'error': 'Token inválido'}, 400
+    data = load_dict(token)
+    if item not in data:
+        return {'error': 'El item no ha sido evaluado'}, 404
+    item_data = data[item]
+    item_data['accumulative'] = data['total']
+    return format_response(item_data), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
