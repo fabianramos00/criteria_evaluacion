@@ -1,4 +1,5 @@
 import re
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from difflib import SequenceMatcher
 from xml.etree.ElementTree import fromstring
@@ -7,20 +8,24 @@ from bs4 import BeautifulSoup
 from requests import get
 from models.models import OAI_PMH, ROAR
 
+
 def open_doar(repository_name):
     URL_OPEN_DOAR = f'https://v2.sherpa.ac.uk/cgi/retrieve?item-type=repository&api-key=0FCFE154-080F-11EB-8A17-20EB1577CA68&format=Json&filter=[["name","contains word","{repository_name}"]]&limit=4'
     data = get(URL_OPEN_DOAR).json()
     return {'name': data['items'][0]['repository_metadata']['name'][0]['name'],
             'host': data['items'][0]['repository_metadata']['url']} if 0 < len(data['items']) else None
 
+
 def roar(repository_name):
     result_roar = ROAR.query.filter(ROAR.repository_name.like(f'%{repository_name}%')).all()
     return {'name': result_roar[0].repository_name, 'host': result_roar[0].home_page} if 0 < len(result_roar) else None
+
 
 def oai_pmh(repository_name):
     result_oai = OAI_PMH.query.filter(OAI_PMH.repository_name.like(f'%{repository_name}%')).all()
     return {'name': result_oai[0].repository_name, 'host': result_oai[0].namespace_identifier} if 0 < len(
         result_oai) else None
+
 
 def re3data(repository_name):
     URL_R3DATA = f'https://www.re3data.org/api/beta/repositories?query={repository_name}'
@@ -31,6 +36,7 @@ def re3data(repository_name):
             print(i.find('name').text)
             return {'name': i.find('name').text, 'host': None}
     return None
+
 
 def la_referencia_links(repository_name):
     URL_LA_REP = f'https://www.lareferencia.info/vufind/Search/Results?limit=5&filter%5B%5D=reponame_str%3A"{repository_name}"&type=AllFields&sort=year'
@@ -45,6 +51,7 @@ def la_referencia_links(repository_name):
         link_list.append(page_parser_la_r.find_all('tr')[-4].find('a')['href'])
     return link_list
 
+
 def la_referencia(repository_name):
     URL_LA = f'https://www.lareferencia.info/vufind/Search/Results?lookfor={repository_name}&type=AllFields&limit=5'
     page_la = get(URL_LA)
@@ -54,6 +61,7 @@ def la_referencia(repository_name):
         if 0.9 < SequenceMatcher(None, repository_la, repository_name).ratio():
             return {'name': repository_la, 'host': None, 'links': la_referencia_links(repository_la)}
     return None
+
 
 def open_aire_links(repository_name):
     links_oa, links_rep = [], []
@@ -74,6 +82,7 @@ def open_aire_links(repository_name):
                 'a')[0]['href'])
     return links_rep
 
+
 def open_aire(repository_name):
     URL_OA = f'https://explore.openaire.eu/search/find?active=datasources&fv0={repository_name}&f0=q'
     page_openaire = get(URL_OA)
@@ -85,6 +94,7 @@ def open_aire(repository_name):
             return {'name': text, 'host': i.find_all('a')[1]['href'] if 1 < len(link_list) else None,
                     'links': open_aire_links(text)}
     return None
+
 
 def google_scholar(repository_url):
     repository_url = repository_url.replace('https://', '').replace('http://', '')
@@ -100,6 +110,7 @@ def google_scholar(repository_url):
         return {'name': None, 'host': results_scholar[0]['domain'], 'links': [i['link'] for i in results_scholar]}
     return None
 
+
 def base(repository_name):
     URL_BASE = f'https://www.base-search.net/Search/Results?lookfor={repository_name}'
     page_base = get(URL_BASE)
@@ -112,13 +123,14 @@ def base(repository_name):
                 'div')[1].find(text=True, recursive=False)
         repository_tmp = repository_tmp.rstrip().lstrip()
         ratio = SequenceMatcher(None, repository_tmp.lower(), repository_name.lower()).ratio()
-        art_list.append((repository_tmp, i.find('a', {'class': 'link-gruen bold'})['href']))
+        art_list.append((repository_tmp, i.find('a', {'class': 'link1'})['href']))
         if 0.9 < ratio:
             if base_repository is None or base_repository['ratio'] < ratio:
                 base_repository = {'name': repository_tmp, 'host': None, 'ratio': ratio}
     if base_repository is not None:
         base_repository['links'] = [i[1] for i in art_list if base_repository['name'] == i[0]]
     return base_repository
+
 
 def core(repository_name):
     core_repository_name = repository_name.replace(' ', '%20')
@@ -135,6 +147,7 @@ def core(repository_name):
                         core_repository = {'name': text, 'host': None, 'ratio': ratio}
     return core_repository
 
+
 def standard_name(data):
     first = None
     for key in data:
@@ -144,6 +157,7 @@ def standard_name(data):
             elif data[key]['name'] is not None and first != data[key]['name']:
                 return 0
     return 1.5 if first is None else 0
+
 
 def friendly_secure_url(repository_url):
     text, value = 'URL segura y amigable', 0
@@ -160,6 +174,7 @@ def friendly_secure_url(repository_url):
         'text': text
     }
 
+
 def count_items(data, item_name):
     count, value, text = 0, 0, f'No tiene presencia en {item_name}'
     for i in data:
@@ -174,6 +189,7 @@ def count_items(data, item_name):
         'text': text
     }
 
+
 def count_national_collectors(collector_data):
     value, text = 0, 'No tiene presencia en recolectores nacionales'
     if collector_data is not None:
@@ -187,6 +203,7 @@ def count_national_collectors(collector_data):
         'text': text
     }
 
+
 def search_in(function, repository_names):
     for i in repository_names:
         result = function(i)
@@ -194,53 +211,73 @@ def search_in(function, repository_names):
             return result
     return None
 
-def is_open_access(url):
+
+def is_open_access(found_in, url):
     page = get(url)
     page_parse = BeautifulSoup(page.content, 'html.parser')
     meta_list = page_parse.find_all('meta', {'name': 'DC.rights'})
-    author_metadata = True if 0 < len(meta_list) else False
     for i in meta_list:
         if 'openAccess' in i['content']:
-            return True, True
-    return False, True if 0 < len(meta_list) else False
+            is_open, author_rights = True, True
+            break
+    else:
+        is_open, author_rights = False, True if 0 < len(meta_list) else False
+    return {
+        'url': url,
+        'found_in': found_in,
+        'open_access': is_open,
+        'author_rights': author_rights
+    }
+
 
 def open_access(visibility_dict):
     link_list, dict_list, value = [], [], 1
-    for i in visibility_dict:
-        if visibility_dict[i] is not None and 'links' in visibility_dict[i]:
-            for url in visibility_dict[i]['links']:
-                if url not in link_list:
-                    link_list.append(url)
-                    is_open, author_rights = is_open_access(url)
-                    if not is_open:
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        for i in visibility_dict:
+            if visibility_dict[i] is not None and 'links' in visibility_dict[i]:
+                for url in visibility_dict[i]['links']:
+                    task_result = executor.submit(is_open_access, i, url).result()
+                    if not task_result['open_access']:
                         value = 0
-                    dict_list.append({
-                        'url': url,
-                        'found_in': i,
-                        'open_access': is_open,
-                        'author_rights': author_rights
-                    })
+                    dict_list.append(task_result)
     return value, dict_list
+
+
+def execute_pool_thread(task_dict, repository_name_list):
+    result_dict = {}
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        result_dict = {i: executor.submit(search_in, task_dict[i], repository_name_list).result() for i in task_dict}
+    return result_dict
+
 
 def execute_visibility(data, form):
     initiatives_existence, national_collector = form['initiatives_existence'], form['national_collector']
     del form['national_collector'], form['initiatives_existence']
+    functions_dict = {
+        'OpenDoar': open_doar,
+        're3data': re3data,
+        'LA-Referencia': la_referencia,
+        'OpenAIRE': open_aire,
+        'BASE': base,
+        'CORE': core
+    }
+    result_pool = execute_pool_thread(functions_dict, data['repository_names'])
     resume_visibility = {
         'directory': {
             'details': {
-                'OpenDoar': search_in(open_doar, data['repository_names']),
+                'OpenDoar': result_pool['OpenDoar'],
                 'ROAR': search_in(roar, data['repository_names']),
                 'OAI-PMH': search_in(oai_pmh, data['repository_names']),
-                're3data': search_in(re3data, data['repository_names'])
+                're3data': result_pool['re3data']
             }
         },
         'collector': {
             'details': {
-                'LA-Referencia': search_in(la_referencia, data['repository_names']),
-                'OpenAIRE': search_in(open_aire, data['repository_names']),
-                # 'Google-Scholar': google_scholar(data['repository_url']),
-                'BASE': search_in(base, data['repository_names']),
-                'CORE': search_in(core, data['repository_names'])
+                'LA-Referencia': result_pool['LA-Referencia'],
+                'OpenAIRE': result_pool['OpenAIRE'],
+                'Google-Scholar': google_scholar(data['repository_url']),
+                'BASE': result_pool['BASE'],
+                'CORE': result_pool['CORE']
             }
         },
         'initiatives_existence': 1 if initiatives_existence else 0,

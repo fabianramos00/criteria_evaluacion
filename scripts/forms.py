@@ -38,6 +38,8 @@ class RequiredIf(DataRequired):
 
     def __init__(self, other_field_name, *args, **kwargs):
         self.other_field_name = other_field_name
+        if 'message' not in kwargs:
+            kwargs['message'] = 'El campo es requerido'
         super(RequiredIf, self).__init__(*args, **kwargs)
 
     def __call__(self, form, field):
@@ -53,7 +55,6 @@ class RegistrationForm(Form):
     repository_url = StringField('URL', validators=[DataRequired('El campo es requerido'), URL(message='URL inválida'), domain_valid])
     repository_name = StringField('Nombre', validators=[DataRequired('El campo es requerido')])
     repository_name1 = StringField('Nombre 1')
-    repository_name2 = StringField('Nombre 2')
 
     def validate(self):
         if not super(RegistrationForm, self).validate():
@@ -63,22 +64,12 @@ class RegistrationForm(Form):
             self.repository_name.errors.append(msg)
             self.repository_name1.errors.append(msg)
             return False
-        if self.repository_name.data and self.repository_name1.data and self.repository_name.data == self.repository_name2.data:
-            msg = 'Los nombres ingresados están repetidos'
-            self.repository_name.errors.append(msg)
-            self.repository_name2.errors.append(msg)
-            return False
-        if self.repository_name1.data and self.repository_name2.data and self.repository_name1.data == self.repository_name2.data:
-            msg = 'Los nombres ingresados están repetidos'
-            self.repository_name1.errors.append(msg)
-            self.repository_name2.errors.append(msg)
-            return False
         return True
 
 class VisibilityForm(Form):
     national_collector = BooleanField('Presencia en recolectores nacionales', validators=[boolean_required])
     initiatives_existence = BooleanField('Existencia de iniciativas', validators=[boolean_required])
-    collector_url1 = StringField('URL_1', validators=[RequiredIf('national_collector', message='El campo es requerido'), URL(message='URL inválida'), domain_valid])
+    collector_url1 = StringField('URL_1', validators=[RequiredIf('national_collector'), URL(message='URL inválida'), domain_valid])
     collector_url2 = StringField('URL_2', validators=[Optional(), URL(message='URL inválida'), domain_valid])
     collector_url3 = StringField('URL_3', validators=[Optional(), URL(message='URL inválida'), domain_valid])
     collector_url4 = StringField('URL_4', validators=[Optional(), URL(message='URL inválida'), domain_valid])
@@ -86,27 +77,27 @@ class VisibilityForm(Form):
 
 class PolicyForm(Form):
     open_access = BooleanField(validators=[boolean_required])
-    open_access_url = StringField(validators=[RequiredIf('open_access', message='El campo es requerido'), URL(message='URL inválida'), website_valid])
+    open_access_url = StringField(validators=[RequiredIf('open_access'), URL(message='URL inválida'), website_valid])
     metadata_reuse = BooleanField(validators=[boolean_required])
-    metadata_reuse_url = StringField(validators=[RequiredIf('metadata_reuse', message='El campo es requerido'), URL(message='URL inválida'), website_valid])
+    metadata_reuse_url = StringField(validators=[RequiredIf('metadata_reuse'), URL(message='URL inválida'), website_valid])
     content_preservation = BooleanField(validators=[boolean_required])
-    content_preservation_url = StringField(validators=[RequiredIf('content_preservation', message='El campo es requerido'), URL(message='URL inválida'), website_valid])
+    content_preservation_url = StringField(validators=[RequiredIf('content_preservation'), URL(message='URL inválida'), website_valid])
     deposit_data = BooleanField(validators=[boolean_required])
-    deposit_data_url = StringField(validators=[RequiredIf('deposit_data', message='El campo es requerido'), URL(message='URL inválida'), website_valid])
+    deposit_data_url = StringField(validators=[RequiredIf('deposit_data'), URL(message='URL inválida'), website_valid])
     action_policy = BooleanField(validators=[boolean_required])
-    action_policy_url = StringField(validators=[RequiredIf('action_policy', message='El campo es requerido'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
+    action_policy_url = StringField(validators=[RequiredIf('action_policy'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
     policy_data = BooleanField(validators=[boolean_required])
-    policy_data_url = StringField(validators=[RequiredIf('policy_data', message='El campo es requerido'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
+    policy_data_url = StringField(validators=[RequiredIf('policy_data'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
     vision_mission = BooleanField(validators=[boolean_required])
-    vision_mission_url = StringField(validators=[RequiredIf('vision_mission', message='El campo es requerido'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
+    vision_mission_url = StringField(validators=[RequiredIf('vision_mission'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
     contact = BooleanField(validators=[boolean_required])
-    contact_url = StringField(validators=[RequiredIf('contact', message='El campo es requerido'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
+    contact_url = StringField(validators=[RequiredIf('contact'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
     url = StringField()
 
 class LegalAspectsForm(Form):
     author_property = BooleanField(validators=[boolean_required])
     author_permission = BooleanField(validators=[boolean_required])
-    author_permission_url = StringField(validators=[RequiredIf('author_permission', message='El campo es requerido'), URL(message='URL inválida'), website_valid])
+    author_permission_url = StringField(validators=[RequiredIf('author_permission'), URL(message='URL inválida'), website_valid])
     editorial_policy = BooleanField(validators=[boolean_required])
     author_copyright = BooleanField(validators=[boolean_required])
 
@@ -129,16 +120,16 @@ class InteroperabilityForm(Form):
 
 class SecurityForm(Form):
     backups = BooleanField(validators=[boolean_required])
-    backups_url = StringField(validators=[RequiredIf('backups', message='El campo es requerido'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
+    backups_url = StringField(validators=[RequiredIf('backups'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
     checksum = BooleanField(validators=[boolean_required])
-    checksum_url = StringField(validators=[RequiredIf('checksum', message='El campo es requerido'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
+    checksum_url = StringField(validators=[RequiredIf('checksum'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
     backups_location = BooleanField(validators=[boolean_required])
     format_control = BooleanField(validators=[boolean_required])
     url = StringField()
 
 class StatisticsForm(Form):
     general_statistics = BooleanField(validators=[boolean_required])
-    general_statistics_url = StringField(validators=[RequiredIf('general_statistics', message='El campo es requerido'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
+    general_statistics_url = StringField(validators=[RequiredIf('general_statistics'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
     save_logs = BooleanField(validators=[boolean_required])
     counter = BooleanField(validators=[boolean_required])
     url = StringField()
@@ -146,9 +137,9 @@ class StatisticsForm(Form):
 class ServicesForm(Form):
     rss_alert = BooleanField(validators=[boolean_required])
     author_profiles = BooleanField(validators=[boolean_required])
-    author_profiles_url = StringField(validators=[RequiredIf('author_profiles', message='El campo es requerido'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
+    author_profiles_url = StringField(validators=[RequiredIf('author_profiles'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
     cite_metrics = BooleanField(validators=[boolean_required])
-    cite_metrics_url = StringField(validators=[RequiredIf('cite_metrics', message='El campo es requerido'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
+    cite_metrics_url = StringField(validators=[RequiredIf('cite_metrics'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
     new_metrics = BooleanField(validators=[boolean_required])
-    new_metrics_url = StringField(validators=[RequiredIf('new_metrics', message='El campo es requerido'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
+    new_metrics_url = StringField(validators=[RequiredIf('new_metrics'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
     url = StringField()

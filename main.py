@@ -42,8 +42,8 @@ def token_required(f):
         if not exists(f'./data/{token}.json'):
             return {'error': 'Token inválido'}, 406
         data = load_dict(path_list[-1])
-        # if item in data:
-        #     return {'error': 'El ítem ya fue evaluado'}, 406
+        if item in data:
+            return {'error': 'El ítem ya fue evaluado'}, 406
         if item != criteria_list[0] and criteria_list[criteria_list.index(item) - 1] not in data:
             return {'error': 'No se ha evaluado el ítem previo'}, 406
         return f(*args, **kwargs)
@@ -69,8 +69,6 @@ def home():
     }
     if form.repository_name1.data:
         data_repository['repository_names'].append(form.repository_name1.data)
-    if form.repository_name2.data:
-        data_repository['repository_names'].append(form.repository_name2.data)
     save_dict(token, data_repository)
     return {'token': token}, 200
 

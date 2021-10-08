@@ -6,6 +6,7 @@ from uuid import uuid4
 from requests import get
 from requests.exceptions import ConnectionError
 
+
 def ping(host):
     try:
         request = get(host, verify=False)
@@ -13,23 +14,25 @@ def ping(host):
     except ConnectionError:
         return False
 
+
 # def ping(host):
-    # host = host.replace('https://', '').replace('http://', '')
-    # try:
-    #     param = '-n' if platform.system().lower() == 'windows' else '-c'
-    #     check_output(
-    #         ['ping', param, '3', host],
-    #         stderr=STDOUT,
-    #         universal_newlines=True,
-    #         shell=False
-    #     )
-    #     return True
-    # except CalledProcessError:
-    #     return False
+# host = host.replace('https://', '').replace('http://', '')
+# try:
+#     param = '-n' if platform.system().lower() == 'windows' else '-c'
+#     check_output(
+#         ['ping', param, '3', host],
+#         stderr=STDOUT,
+#         universal_newlines=True,
+#         shell=False
+#     )
+#     return True
+# except CalledProcessError:
+#     return False
 
 def check_website(url):
     response = get(url, verify=False)
     return True if response.status_code == 200 else False
+
 
 def save_dict(token, data):
     dump_data = json.dumps(data)
@@ -37,9 +40,11 @@ def save_dict(token, data):
     f.write(dump_data)
     f.close()
 
+
 def load_dict(token):
     with open(f'./data/{token}.json') as json_file:
         return json.load(json_file)
+
 
 def generate_token():
     flag, token = True, None
@@ -49,17 +54,22 @@ def generate_token():
             flag = False
     return token
 
+
 def format_response(result_dict):
     for i in result_dict:
         if type(result_dict[i]) == dict:
             if 'text' in result_dict[i]:
+                actual_result = result_dict[i]
                 result_dict[i] = {
-                    'text': result_dict[i]['text'],
-                    'value': result_dict[i]['value'],
+                    'text': actual_result['text'],
+                    'value': actual_result['value'],
                 }
+                if 'details' in actual_result:
+                    result_dict[i]['details'] = [x for x in actual_result['details'] if actual_result['details'][x] is None]
             elif 'url' in result_dict[i]:
                 result_dict[i] = result_dict[i]['value']
     return result_dict
+
 
 def count_form_boolean_fields(dict_form):
     if 'url' in dict_form:
