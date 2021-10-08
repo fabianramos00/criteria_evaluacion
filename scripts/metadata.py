@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 from bs4 import BeautifulSoup
@@ -31,6 +32,7 @@ bibliographic_managers = ['mendeley', 'zotero']
 metadata_export_types = ['mets', 'premis', 'rdf', 'json', 'marc', 'bibtex']
 social_networks = ['facebook', 'twitter', 'linkedin']
 
+
 def check_metadata_date(page_parse):
     date_regex, date_formats, date_dict = [r'DC.date.*', r'DCTERMS.date.*'], ['%Y-%m-%d', '%Y-%m-%dT%H:%M:%SZ'], {}
     standard_date_format = True
@@ -48,6 +50,7 @@ def check_metadata_date(page_parse):
                         pass
     return (date_dict if date_dict else None), (standard_date_format if standard_date_format else None)
 
+
 def check_access_name(name_list):
     if name_list is not None:
         for i in name_list:
@@ -55,6 +58,7 @@ def check_access_name(name_list):
             if 0 < len(access_value):
                 return access_value[0]
     return None
+
 
 def check_types_research_result(metadata):
     if metadata is not None:
@@ -67,13 +71,18 @@ def check_types_research_result(metadata):
         return values if 0 < len(values) else None
     return None
 
+
 def check_format(format_content):
     if format_content is not None:
-        values = format_content.split('/')
-        if len(values) == 2:
-            if values[0] in format_dict and values[1] in format_dict[values[0]]:
-                return format_content
+        if type(format_content) != list:
+            format_content = [format_content]
+        for i in format_content:
+            values = i.split('/')
+            if len(values) == 2:
+                if values[0] in format_dict and values[1] in format_dict[values[0]]:
+                    return i
     return None
+
 
 def check_version_format(metadata):
     if metadata is not None:
@@ -85,6 +94,7 @@ def check_version_format(metadata):
                     break
         return values if 0 < len(values) else None
     return None
+
 
 def check_language_format(language_value):
     if language_value is not None:
@@ -98,6 +108,7 @@ def check_language_format(language_value):
         if 'zxx' == language_value:
             return 'zxx'
     return None
+
 
 def check_author_id(author_value):
     if author_value is not None:
@@ -114,6 +125,7 @@ def check_author_id(author_value):
             if 'https://orcid.org/' in author_value:
                 return 'ORCID'
     return None
+
 
 def search_items(items, page):
     result = {i: None for i in items}
@@ -133,6 +145,7 @@ def search_items(items, page):
                 value = None
                 break
     return result
+
 
 def get_metadata(url_dict):
     page = get(url_dict['url'], verify=False)
@@ -169,6 +182,7 @@ def get_metadata(url_dict):
     url_dict['metadata'] = metadata
     return url_dict
 
+
 def validate_metadata(url_dict_list):
     fields_metadata_dict, fields_dict = {}, {}
     fields_metadata, item_fields = metadata_fields.copy(), fields_item.copy()
@@ -190,6 +204,7 @@ def validate_metadata(url_dict_list):
             break
     return fields_metadata_dict, fields_dict
 
+
 def evaluate_metadata_group(metadata_dict, fields):
     new_dict = {'value': 1, 'details': {}}
     for i in fields:
@@ -198,9 +213,11 @@ def evaluate_metadata_group(metadata_dict, fields):
             new_dict['value'] = 0
     return new_dict
 
+
 def execute_metadata(form, link_list):
     metadata_resume = count_form_boolean_fields(form)
-    new_link_list = [get_metadata(x) for x in link_list]
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        new_link_list = [executor.submit(get_metadata, x).result() for x in link_list]
     result_metadata, result_fields = validate_metadata(new_link_list)
     metadata_resume['first_fields'] = evaluate_metadata_group(result_metadata,
                                                               ['DC.creator', 'DC.title', 'DC.type', 'DC.date',

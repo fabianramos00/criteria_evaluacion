@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor
+
 from requests import get
 
 from scripts.tools import count_form_boolean_fields
@@ -13,10 +15,11 @@ def statistics_url_exist(url):
 
 def evaluate_urls_statistics(url_list):
     value = 1
-    for i in url_list:
-        i['statistics'] = statistics_url_exist(i['url'])
-        if i['statistics'] is None:
-            value = 0
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        for i in url_list:
+            i['statistics'] = executor.submit(statistics_url_exist, i['url']).result()
+            if i['statistics'] is None:
+                value = 0
     return value
 
 def execute_statistics(form, url_list):
