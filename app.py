@@ -1,10 +1,11 @@
-from os.path import exists
-
 from functools import wraps
 from flask import Flask
 from flask import request
 from flask_cors import CORS
 from decouple import config
+from flask_marshmallow import Marshmallow
+from flask_migrate import Migrate
+from sqlalchemy import desc
 from urllib3 import disable_warnings
 from urllib3.exceptions import InsecureRequestWarning
 
@@ -18,8 +19,8 @@ from scripts.statistics import *
 from scripts.services import *
 from scripts.forms import RegistrationForm, VisibilityForm, PolicyForm, LegalAspectsForm, MetadataForm, SecurityForm, \
     InteroperabilityForm, StatisticsForm, ServicesForm
-from scripts.tools import generate_token, ping, save_dict, load_dict, format_response
-from models.models import db
+from scripts.tools import save_record, load_dict, format_response
+from models.models import db, Record, RecordSchema
 
 disable_warnings(InsecureRequestWarning)
 
@@ -30,16 +31,19 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = config('DATABASE_URL')
 # app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///db.sqlite3'
 db.init_app(app)
+migrate = Migrate(app, db)
 
 criteria_list = ['visibility', 'policy', 'legal_aspects', 'metadata', 'interoperability', 'security', 'statistics',
                  'services']
+
 
 def token_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         path_list = request.path.split('/')
         token, item = path_list[-1], path_list[1]
-        if not exists(f'./data/{token}.json'):
+        record = Record.query.filter_by(token=token).first()
+        if record is None:
             return {'error': 'Token inválido'}, 406
         data = load_dict(path_list[-1])
         if item in data:
@@ -47,21 +51,23 @@ def token_required(f):
         if item != criteria_list[0] and criteria_list[criteria_list.index(item) - 1] not in data:
             return {'error': 'No se ha evaluado el ítem previo'}, 406
         return f(*args, **kwargs)
+
     return decorated_function
+
 
 def save_result(token, data, result, item):
     data.update({item: result})
     data['total'] += result['total']
-    save_dict(token, data)
+    save_record(data, db, token, item == criteria_list[-1], item)
     result['accumulative'] = data['total']
     return format_response(result)
+
 
 @app.route('/', methods=['POST'])
 def home():
     form = RegistrationForm.from_json(request.json)
     if not form.validate():
         return form.errors, 400
-    token = generate_token()
     data_repository = {
         'repository_url': form.repository_url.data,
         'repository_names': [form.repository_name.data],
@@ -69,8 +75,9 @@ def home():
     }
     if form.repository_name1.data:
         data_repository['repository_names'].append(form.repository_name1.data)
-    save_dict(token, data_repository)
-    return {'token': token}, 200
+    record = save_record(data_repository, db)
+    return {'token': record.token}, 200
+
 
 @app.route('/visibility/<token>', methods=['POST'])
 @token_required
@@ -82,6 +89,7 @@ def visibility(token):
     result, links_dict = execute_visibility(data, visibility_json)
     data['links'] = links_dict
     return save_result(token, data, result, 'visibility'), 200
+
 
 @app.route('/policy/<token>', methods=['POST'])
 @token_required
@@ -95,6 +103,7 @@ def policy(token):
     result = execute_policy(request_dict, data['repository_names'])
     return save_result(token, data, result, 'policy'), 200
 
+
 @app.route('/legal_aspects/<token>', methods=['POST'])
 @token_required
 def legal_aspects(token):
@@ -104,6 +113,7 @@ def legal_aspects(token):
     data = load_dict(token)
     result = execute_legal_aspects(legal_aspects_json, data['links'])
     return save_result(token, data, result, 'legal_aspects'), 200
+
 
 @app.route('/metadata/<token>', methods=['POST'])
 @token_required
@@ -116,6 +126,7 @@ def metadata(token):
     data['links'] = links
     return save_result(token, data, result, 'metadata'), 200
 
+
 @app.route('/interoperability/<token>', methods=['POST'])
 @token_required
 def interoperability(token):
@@ -125,6 +136,7 @@ def interoperability(token):
         return interoperability_form.errors, 400
     result = execute_interoperability(request.json, data)
     return save_result(token, data, result, 'interoperability'), 200
+
 
 @app.route('/security/<token>', methods=['POST'])
 @token_required
@@ -137,6 +149,7 @@ def security(token):
         return security_form.errors, 400
     result = execute_security(request_dict)
     return save_result(token, data, result, 'security'), 200
+
 
 @app.route('/statistics/<token>', methods=['POST'])
 @token_required
@@ -151,6 +164,7 @@ def statistics(token):
     data['links'] = links_dict
     return save_result(token, data, result, 'statistics'), 200
 
+
 @app.route('/services/<token>', methods=['POST'])
 @token_required
 def services(token):
@@ -163,11 +177,13 @@ def services(token):
     result = execute_services(request_dict, data['links'])
     return save_result(token, data, result, 'services'), 200
 
+
 @app.route('/<item>/<token>', methods=['GET'])
 def get_data(item, token):
     if item not in criteria_list:
         return {'error': 'Item inválido'}, 400
-    if not exists(f'./data/{token}.json'):
+    record = Record.query.filter_by(token=token).first()
+    if record is None:
         return {'error': 'Token inválido'}, 400
     data = load_dict(token)
     if item not in data:
@@ -175,6 +191,24 @@ def get_data(item, token):
     item_data = data[item]
     item_data['accumulative'] = data['total']
     return format_response(item_data), 200
+
+
+@app.route('/list', methods=['GET'])
+def get_list():
+    page = int(request.args.get('page')) if request.args.get('page') is not None else 1
+    quantity = int(request.args.get('quantity')) if request.args.get('quantity') is not None else 10
+    record_list = Record.query.order_by(desc(Record.last_updated)).paginate(page, quantity, error_out=False)
+    record_schema = RecordSchema(many=True)
+    return {
+               'has_prev': record_list.has_prev,
+               'has_next': record_list.has_next,
+               'prev_num': record_list.prev_num,
+               'next_num': record_list.next_num,
+               'pages': record_list.pages,
+               'total_records': record_list.total,
+               'items': record_schema.dump(record_list.items)
+           }, 200
+
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -6,6 +6,8 @@ from uuid import uuid4
 from requests import get
 from requests.exceptions import ConnectionError
 
+from models.models import Record
+
 
 def ping(host):
     try:
@@ -34,25 +36,22 @@ def check_website(url):
     return True if response.status_code == 200 else False
 
 
-def save_dict(token, data):
-    dump_data = json.dumps(data)
-    f = open(f'./data/{token}.json', 'w')
-    f.write(dump_data)
-    f.close()
+def save_record(data, db, token=None, is_completed=False, last_item_evaluated=''):
+    record = None
+    if token is not None:
+        record = Record.query.filter_by(token=token).first()
+    if record is None:
+        record = Record(data, data['repository_url'], data['repository_names'])
+        db.session.add(record)
+    else:
+        record.data, record.rating, record.is_completed, record.last_item_evaluated = data, data[
+            'total'], is_completed, last_item_evaluated
+    db.session.commit()
+    return record
 
 
 def load_dict(token):
-    with open(f'./data/{token}.json') as json_file:
-        return json.load(json_file)
-
-
-def generate_token():
-    flag, token = True, None
-    while flag:
-        token = uuid4()
-        if not exists(f'./data/{token}.json'):
-            flag = False
-    return token
+    return Record.query.filter_by(token=token).first().data
 
 
 def format_response(result_dict):
@@ -65,7 +64,8 @@ def format_response(result_dict):
                     'value': actual_result['value'],
                 }
                 if 'details' in actual_result:
-                    result_dict[i]['details'] = [x for x in actual_result['details'] if actual_result['details'][x] is None]
+                    result_dict[i]['details'] = [x for x in actual_result['details'] if
+                                                 actual_result['details'][x] is None]
             elif 'url' in result_dict[i]:
                 result_dict[i] = result_dict[i]['value']
     return result_dict
