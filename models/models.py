@@ -1,6 +1,5 @@
 from datetime import datetime
 
-from flask_marshmallow import Schema
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import DateTime, Column, String, Integer, Boolean, ARRAY, Float
 from sqlalchemy.dialects.postgresql import JSON, UUID
@@ -54,7 +53,7 @@ class Record(db.Model):
     rating = Column(Float, default=0)
     repository_url = Column(String(500), nullable=False)
     repository_names = Column(ARRAY(String(500)), nullable=False)
-    last_item_evaluated = Column(String(20), nullable=False, default='Started')
+    last_item_evaluated = Column(String(20), nullable=False, default='started')
     is_completed = Column(Boolean, nullable=False, default=False)
 
     def __init__(self, data, repository_url, repository_names):
@@ -64,11 +63,3 @@ class Record(db.Model):
 
     def __str__(self):
         return str(self.token)
-
-
-class RecordSchema(Schema):
-    class Meta:
-        model = Record
-        fields = (
-        'token', 'repository_url', 'repository_names', 'created_on', 'last_updated', 'rating', 'last_item_evaluated',
-        'is_completed')

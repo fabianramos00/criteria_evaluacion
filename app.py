@@ -3,12 +3,12 @@ from flask import Flask
 from flask import request
 from flask_cors import CORS
 from decouple import config
-from flask_marshmallow import Marshmallow
 from flask_migrate import Migrate
 from sqlalchemy import desc
 from urllib3 import disable_warnings
 from urllib3.exceptions import InsecureRequestWarning
 
+from constants import CRITERIA_LIST, CRITERIA_ITEM_DICT
 from scripts.visibility import *
 from scripts.policy import *
 from scripts.legal_aspects import *
@@ -20,7 +20,8 @@ from scripts.services import *
 from scripts.forms import RegistrationForm, VisibilityForm, PolicyForm, LegalAspectsForm, MetadataForm, SecurityForm, \
     InteroperabilityForm, StatisticsForm, ServicesForm
 from scripts.tools import save_record, load_dict, format_response
-from models.models import db, Record, RecordSchema
+from models.models import db, Record
+from models.schemas import RecordSchema
 
 disable_warnings(InsecureRequestWarning)
 
@@ -32,9 +33,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = config('DATABASE_URL')
 # app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///db.sqlite3'
 db.init_app(app)
 migrate = Migrate(app, db)
-
-criteria_list = ['visibility', 'policy', 'legal_aspects', 'metadata', 'interoperability', 'security', 'statistics',
-                 'services']
 
 
 def token_required(f):
@@ -48,7 +46,7 @@ def token_required(f):
         data = load_dict(path_list[-1])
         if item in data:
             return {'error': 'El ítem ya fue evaluado'}, 406
-        if item != criteria_list[0] and criteria_list[criteria_list.index(item) - 1] not in data:
+        if item != CRITERIA_LIST[0] and CRITERIA_LIST[CRITERIA_LIST.index(item) - 1] not in data:
             return {'error': 'No se ha evaluado el ítem previo'}, 406
         return f(*args, **kwargs)
 
@@ -58,9 +56,9 @@ def token_required(f):
 def save_result(token, data, result, item):
     data.update({item: result})
     data['total'] += result['total']
-    save_record(data, db, token, item == criteria_list[-1], item)
+    save_record(data, db, token, item == CRITERIA_LIST[-1], item)
     result['accumulative'] = data['total']
-    return format_response(result)
+    return format_response(result, data)
 
 
 @app.route('/', methods=['POST'])
@@ -142,8 +140,7 @@ def interoperability(token):
 @token_required
 def security(token):
     data = load_dict(token)
-    request_dict = request.json
-    request_dict.update({'url': data['repository_url']})
+    request_dict = request.json.update({'url': data['repository_url']})
     security_form = SecurityForm.from_json(request_dict)
     if not security_form.validate():
         return security_form.errors, 400
@@ -155,8 +152,7 @@ def security(token):
 @token_required
 def statistics(token):
     data = load_dict(token)
-    request_dict = request.json
-    request_dict.update({'url': data['repository_url']})
+    request_dict = request.json.update({'url': data['repository_url']})
     statistics_form = StatisticsForm.from_json(request_dict)
     if not statistics_form.validate():
         return statistics_form.errors, 400
@@ -169,8 +165,7 @@ def statistics(token):
 @token_required
 def services(token):
     data = load_dict(token)
-    request_dict = request.json
-    request_dict.update({'url': data['repository_url']})
+    request_dict = request.json.update({'url': data['repository_url']})
     services_form = ServicesForm.from_json(request_dict)
     if not services_form.validate():
         return services_form.errors, 400
@@ -180,7 +175,7 @@ def services(token):
 
 @app.route('/<item>/<token>', methods=['GET'])
 def get_data(item, token):
-    if item not in criteria_list:
+    if item not in CRITERIA_LIST:
         return {'error': 'Item inválido'}, 400
     record = Record.query.filter_by(token=token).first()
     if record is None:
@@ -190,7 +185,7 @@ def get_data(item, token):
         return {'error': 'El item no ha sido evaluado'}, 404
     item_data = data[item]
     item_data['accumulative'] = data['total']
-    return format_response(item_data), 200
+    return format_response(item_data, data), 200
 
 
 @app.route('/list', methods=['GET'])
@@ -208,6 +203,17 @@ def get_list():
                'total_records': record_list.total,
                'items': record_schema.dump(record_list.items)
            }, 200
+
+
+@app.route('/summary/<token>', methods=['GET'])
+def get_summary(token):
+    record = Record.query.filter_by(token=token).first()
+    if record is None:
+        return {'error': 'Token inválido'}, 406
+    record_schema = RecordSchema().dump(record)
+    record_schema['summary'] = [{'item': i, 'total': record.data[i]['total'], 'item_name': CRITERIA_ITEM_DICT[i]} for i
+                                in CRITERIA_LIST]
+    return record_schema, 200
 
 
 if __name__ == '__main__':

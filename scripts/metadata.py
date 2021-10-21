@@ -6,46 +6,26 @@ from iso639 import languages
 from requests import get
 from re import compile
 
+from constants import METADATA_DATE_REGEX, DATE_FORMATS, ACCESS_STANDARD_VALUES, RESULT_TYPES, FORMAT_DICT, \
+    VERSION_COAR_LIST, ISO_LANGUAGE_LIST, IRALIS_BASE_URL_ID, ORCID_BASE_URL_ID, METADATA_FIELDS, \
+    BIBLIOGRAPHIC_MANAGERS, METADATA_EXPORT_TYPES, SOCIAL_NETWORKS, FIELDS_ITEM
 from scripts.tools import count_form_boolean_fields
-
-metadata_fields = ['DC.creator', 'DC.title', 'DC.type', 'DC.rights', 'DC.description', 'DC.format',
-                   'DC.language', 'DC.identifier', 'DC.subject', 'DC.contributor', 'DC.relation', 'DC.publisher']
-fields_item = ['standard_access_value', 'standard_date_format', 'standard_type_research_result',
-               'single_type_research_result', 'standard_format', 'standard_version_coar', 'single_version',
-               'standard_language', 'dublin_core', 'author_id']
-
-access_standard_values = ['closedAccess', 'embargoedAccess', 'openAccess', 'restrictedAccess']
-result_types = ['article', 'bachelorThesis', 'masterThesis', 'doctoralThesis', 'book', 'bookPart', 'review',
-                'conferenceObject', 'lecture', 'workingPaper', 'preprint', 'report', 'annotation',
-                'contributionToPeriodical', 'patent', 'other']
-version_coar_list = ['draft', 'submittedVersion', 'acceptedVersion', 'publishedVersion', 'updatedVersion']
-format_dict = {
-    'text': ['plain', 'richtext', 'enriched', 'tab-separated-values', 'html', 'sgml', 'xml'],
-    'application': ['octet-stream', 'postscript', 'rtf', 'applefile', 'mac-binhex40', 'wordperfect5.1', 'pdf',
-                    'vnd.oasis.opendocument.text', 'zip', 'macwriteii', 'msword', 'sgml', 'ms-excel', 'ms-powerpoint',
-                    'ms-project', 'ms-works', 'xhtml+xml', 'xml'],
-    'image': ['jpeg', 'gif', 'tiff', 'png', 'jpeg2000', 'sid'],
-    'audio': ['wav', 'mp3', 'quicktime'],
-    'video': ['mpeg1', 'mpeg2', 'mpeg3', 'av']
-}
-bibliographic_managers = ['mendeley', 'zotero']
-metadata_export_types = ['mets', 'premis', 'rdf', 'json', 'marc', 'bibtex']
-social_networks = ['facebook', 'twitter', 'linkedin']
 
 
 def check_metadata_date(page_parse):
-    date_regex, date_formats, date_dict = [r'DC.date.*', r'DCTERMS.date.*'], ['%Y-%m-%d', '%Y-%m-%dT%H:%M:%SZ'], {}
+    date_dict = {}
     standard_date_format = True
-    for regex in date_regex:
+    for regex in METADATA_DATE_REGEX:
         metadata_date = page_parse.find_all('meta', {'name': compile(regex)})
         for i in metadata_date:
             date_dict[i['name']] = i['content']
             if standard_date_format:
                 standard_date_format = False
-                for x in date_formats:
+                for x in DATE_FORMATS:
                     try:
                         datetime.strptime(i['content'], x)
                         standard_date_format = True
+                        break
                     except ValueError:
                         pass
     return (date_dict if date_dict else None), (standard_date_format if standard_date_format else None)
@@ -54,7 +34,7 @@ def check_metadata_date(page_parse):
 def check_access_name(name_list):
     if name_list is not None:
         for i in name_list:
-            access_value = [x for x in access_standard_values if x in i]
+            access_value = [x for x in ACCESS_STANDARD_VALUES if x in i]
             if 0 < len(access_value):
                 return access_value[0]
     return None
@@ -64,7 +44,7 @@ def check_types_research_result(metadata):
     if metadata is not None:
         values = []
         for i in metadata:
-            for j in result_types:
+            for j in RESULT_TYPES:
                 if j in i:
                     values.append(i)
                     break
@@ -79,7 +59,7 @@ def check_format(format_content):
         for i in format_content:
             values = i.split('/')
             if len(values) == 2:
-                if values[0] in format_dict and values[1] in format_dict[values[0]]:
+                if values[0] in FORMAT_DICT and values[1] in FORMAT_DICT[values[0]]:
                     return i
     return None
 
@@ -88,7 +68,7 @@ def check_version_format(metadata):
     if metadata is not None:
         values = []
         for i in metadata:
-            for j in version_coar_list:
+            for j in VERSION_COAR_LIST:
                 if j in i:
                     values.append(i)
                     break
@@ -98,8 +78,7 @@ def check_version_format(metadata):
 
 def check_language_format(language_value):
     if language_value is not None:
-        iso_list = [('part3', 'ISO 639-3'), ('part2b', 'ISO 639-2'), ('part2t', 'ISO 639-2'), ('part1', 'ISO 639-1')]
-        for i, j in iso_list:
+        for i, j in ISO_LANGUAGE_LIST:
             try:
                 languages.get(**{i: language_value})
                 return j
@@ -114,15 +93,15 @@ def check_author_id(author_value):
     if author_value is not None:
         if type(author_value) == list:
             for i in author_value:
-                if 'https://www.iralis.org/' in i or 'https://orcid.org/' in i:
+                if IRALIS_BASE_URL_ID in i or ORCID_BASE_URL_ID in i:
                     pass
                 else:
                     return None
             return 'ORCID/IraLIS'
         else:
-            if 'https://www.iralis.org/' in author_value:
+            if IRALIS_BASE_URL_ID in author_value:
                 return 'IraLIS'
-            if 'https://orcid.org/' in author_value:
+            if ORCID_BASE_URL_ID in author_value:
                 return 'ORCID'
     return None
 
@@ -151,7 +130,7 @@ def get_metadata(url_dict):
     page = get(url_dict['url'], verify=False)
     page_parse = BeautifulSoup(page.content, 'html.parser')
     metadata = {}
-    for name in metadata_fields:
+    for name in METADATA_FIELDS:
         meta_list = page_parse.find_all('meta', {'name': name})
         if len(meta_list) < 2:
             metadata[name] = meta_list[0]['content'] if 1 == len(meta_list) else None
@@ -167,9 +146,9 @@ def get_metadata(url_dict):
         'standard_version_coar': check_version_format(metadata['DC.type']),
         'standard_language': check_language_format(metadata['DC.language']),
         'author_id': check_author_id(metadata['DC.creator']),
-        'bibliographic_managers': search_items(bibliographic_managers, page_parse),
-        'metadata_exports': search_items(metadata_export_types, page_parse),
-        'social_networks': search_items(social_networks, page_parse)
+        'bibliographic_managers': search_items(BIBLIOGRAPHIC_MANAGERS, page_parse),
+        'metadata_exports': search_items(METADATA_EXPORT_TYPES, page_parse),
+        'social_networks': search_items(SOCIAL_NETWORKS, page_parse)
     })
     metadata['DC.date'], url_dict['standard_date_format'] = check_metadata_date(page_parse)
     url_dict['single_type_research_result'] = url_dict['standard_type_research_result'][0] if url_dict[
@@ -185,7 +164,7 @@ def get_metadata(url_dict):
 
 def validate_metadata(url_dict_list):
     fields_metadata_dict, fields_dict = {}, {}
-    fields_metadata, item_fields = metadata_fields.copy(), fields_item.copy()
+    fields_metadata, item_fields = METADATA_FIELDS.copy(), FIELDS_ITEM.copy()
     fields_metadata.append('DC.date')
     for i in fields_metadata:
         fields_metadata_dict[i] = True

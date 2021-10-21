@@ -54,7 +54,7 @@ def load_dict(token):
     return Record.query.filter_by(token=token).first().data
 
 
-def format_response(result_dict):
+def format_response(result_dict, data):
     for i in result_dict:
         if type(result_dict[i]) == dict:
             if 'text' in result_dict[i]:
@@ -68,6 +68,7 @@ def format_response(result_dict):
                                                  actual_result['details'][x] is None]
             elif 'url' in result_dict[i]:
                 result_dict[i] = result_dict[i]['value']
+    result_dict['repository_name'] = data['repository_names'][0]
     return result_dict
 
 

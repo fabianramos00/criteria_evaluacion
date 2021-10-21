@@ -1,5 +1,5 @@
+from constants import BIBLIOGRAPHIC_MANAGERS, METADATA_EXPORT_TYPES, SOCIAL_NETWORKS
 from scripts.tools import count_form_boolean_fields
-from scripts.metadata import bibliographic_managers, metadata_export_types, social_networks
 
 def evaluate_items(links, items_dict):
     if 0 < len(links):
@@ -21,9 +21,9 @@ def evaluate_items(links, items_dict):
 
 def execute_services(form, links):
     services_resume = count_form_boolean_fields(form)
-    evaluated_items = evaluate_items(links, {'bibliographic_managers': (bibliographic_managers, 2),
-                                             'metadata_exports': (metadata_export_types, 2),
-                                             'social_networks': (social_networks, 2)})
+    evaluated_items = evaluate_items(links, {'bibliographic_managers': (BIBLIOGRAPHIC_MANAGERS, 2),
+                                             'metadata_exports': (METADATA_EXPORT_TYPES, 2),
+                                             'social_networks': (SOCIAL_NETWORKS, 2)})
     services_resume['bibliographic_managers'], services_resume['metadata_exports'], services_resume['social_networks'] = \
     evaluated_items['bibliographic_managers'], evaluated_items['metadata_exports'], evaluated_items['social_networks']
     services_resume['total'] = sum(

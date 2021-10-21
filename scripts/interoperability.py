@@ -1,3 +1,4 @@
+from constants import DOCUMENT_IDENTIFIER_LIST
 from scripts.tools import count_form_boolean_fields
 
 def check_collectors(data):
@@ -26,7 +27,7 @@ def check_identifier(links):
     if 0 < len(links):
         for i in links:
             value = i['metadata']['DC.identifier']
-            if any(ext in value for ext in ['doi', 'handle', 'urn', 'orcid']):
+            if any(ext in value for ext in DOCUMENT_IDENTIFIER_LIST):
                 pass
             else:
                 return 0
