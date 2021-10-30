@@ -93,6 +93,8 @@ class PolicyForm(Form):
     contact = BooleanField(validators=[boolean_required])
     contact_url = StringField(validators=[RequiredIf('contact'), URL(message='URL inválida'), website_valid, CompareUrl('url')])
     url = StringField()
+    # Temporal
+    boai = BooleanField(validators=[boolean_required])
 
 class LegalAspectsForm(Form):
     author_property = BooleanField(validators=[boolean_required])

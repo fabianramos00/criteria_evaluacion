@@ -43,9 +43,11 @@ def token_required(f):
         record = Record.query.filter_by(token=token).first()
         if record is None:
             return {'error': 'Token inválido'}, 406
-        data = load_dict(path_list[-1])
+        data = record.data
         if item in data:
-            return {'error': 'El ítem ya fue evaluado'}, 406
+            item_data = data[item]
+            item_data['accumulative'] = data['total']
+            return format_response(item_data, data), 200
         if item != CRITERIA_LIST[0] and CRITERIA_LIST[CRITERIA_LIST.index(item) - 1] not in data:
             return {'error': 'No se ha evaluado el ítem previo'}, 406
         return f(*args, **kwargs)
@@ -180,12 +182,16 @@ def get_data(item, token):
     record = Record.query.filter_by(token=token).first()
     if record is None:
         return {'error': 'Token inválido'}, 400
-    data = load_dict(token)
-    if item not in data:
-        return {'error': 'El item no ha sido evaluado'}, 404
-    item_data = data[item]
-    item_data['accumulative'] = data['total']
-    return format_response(item_data, data), 200
+    is_next = True if not record.is_completed and (
+            (item == CRITERIA_LIST[0] and record.last_item_evaluated == 'started') or (
+            item == CRITERIA_LIST[CRITERIA_LIST.index(record.last_item_evaluated) + 1])) else False
+    if item not in record.data:
+        return {'is_next': is_next, 'is_completed': False}, 404
+    item_data = record.data[item]
+    item_data['accumulative'] = record.data['total']
+    response_data = format_response(item_data, record.data)
+    response_data['is_next'], response_data['is_completed'] = is_next, True
+    return response_data, 200
 
 
 @app.route('/list', methods=['GET'])
