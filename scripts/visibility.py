@@ -102,12 +102,14 @@ def google_scholar(repository_url):
         'api_key': '1EC0E82545D44B5A9618F3DE0896BF50',
         'search_type': 'scholar',
         'q': repository_url,
-        'scholar_year_min': datetime.now().year - 5
+        'scholar_year_min': datetime.now().year - 5,
+        'scholar_include_citations': 'false'
     }
     api_result = get('https://api.scaleserp.com/search', params)
     results_scholar = api_result.json()['scholar_results'] if 'scholar_results' in api_result.json() else []
     if 0 < len(results_scholar):
-        return {'name': None, 'host': results_scholar[0]['domain'], 'links': [i['link'] for i in results_scholar]}
+        return {'name': None, 'host': results_scholar[0]['domain'],
+                'links': [i['link'] for i in results_scholar if repository_url in i['domain']]}
     return None
 
 
@@ -149,14 +151,15 @@ def core(repository_name):
 
 
 def standard_name(data):
-    first = None
-    for key in data:
-        if data[key]:
-            if first is None:
-                first = data[key]['name']
-            elif data[key]['name'] is not None and first != data[key]['name']:
-                return 0
-    return 1.5 if first is None else 0
+    name_list = [{'found_in': key, 'name': data[key]['name']} for key in data if
+                 data[key] and data[key]['name'] is not None]
+    first = name_list[0] if len(name_list) > 0 else None
+    resume = {'value': 1.5 if first is None else 0, 'details': name_list}
+    for name in name_list[1:]:
+        if first != name:
+            resume['value'] = 0
+            break
+    return resume
 
 
 def friendly_secure_url(repository_url):
@@ -191,7 +194,7 @@ def count_items(data, item_name):
 
 
 def count_national_collectors(collector_data):
-    value, text = 0, 'No tiene presencia en recolectores nacionales'
+    value, text, collector_list = 0, 'No tiene presencia en recolectores nacionales', []
     if collector_data is not None:
         collector_list = [collector_data[i] for i in collector_data if collector_data[i] is not None]
         if 5 == len(collector_list):
@@ -200,7 +203,8 @@ def count_national_collectors(collector_data):
             value, text = 1, 'Presencia en 1 o más recolectores nacionales'
     return {
         'value': value,
-        'text': text
+        'text': text,
+        'details': collector_list
     }
 
 
@@ -238,9 +242,10 @@ def open_access(visibility_dict):
                 for url in visibility_dict[i]['links']:
                     task_result = executor.submit(is_open_access, i, url).result()
                     if not task_result['open_access']:
+                        link_list.append((i, task_result['url']))
                         value = 0
                     dict_list.append(task_result)
-    return value, dict_list
+    return {'value': value, 'details': link_list}, dict_list
 
 
 def execute_pool_thread(task_dict, repository_name_list):

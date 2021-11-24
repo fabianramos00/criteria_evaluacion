@@ -24,15 +24,17 @@ def check_oai_pmh(oai_pmh_value):
     }
 
 def check_identifier(links):
+    result = {'value': 0, 'details': []}
     if 0 < len(links):
+        result['value'] = 1
         for i in links:
             value = i['metadata']['DC.identifier']
             if any(ext in value for ext in DOCUMENT_IDENTIFIER_LIST):
                 pass
             else:
-                return 0
-        return 1
-    return 0
+                result['value'] = 0
+                result['details'].append(i['url'])
+    return result
 
 def execute_interoperability(form, data):
     interoperability_resume = count_form_boolean_fields(form)

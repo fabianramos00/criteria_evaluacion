@@ -14,13 +14,14 @@ def statistics_url_exist(url):
         return None
 
 def evaluate_urls_statistics(url_list):
-    value = 1
+    result = {'value': 1 if 0 < len(url_list) else 0, 'details': []}
     with ThreadPoolExecutor(max_workers=3) as executor:
         for i in url_list:
             i['statistics'] = executor.submit(statistics_url_exist, i['url']).result()
             if i['statistics'] is None:
-                value = 0
-    return value
+                result['value'] = 0
+                result['details'].append(i['url'])
+    return result
 
 def execute_statistics(form, url_list):
     statistics_resume = count_form_boolean_fields(form)

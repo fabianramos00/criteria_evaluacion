@@ -58,7 +58,7 @@ def token_required(f):
 def save_result(token, data, result, item):
     data.update({item: result})
     data['total'] += result['total']
-    save_record(data, db, token, item == CRITERIA_LIST[-1], item)
+    # save_record(data, db, token, item == CRITERIA_LIST[-1], item)
     result['accumulative'] = data['total']
     return format_response(result, data)
 
@@ -142,7 +142,8 @@ def interoperability(token):
 @token_required
 def security(token):
     data = load_dict(token)
-    request_dict = request.json.update({'url': data['repository_url']})
+    request_dict = request.json
+    request_dict['url'] = data['repository_url']
     security_form = SecurityForm.from_json(request_dict)
     if not security_form.validate():
         return security_form.errors, 400
@@ -154,7 +155,8 @@ def security(token):
 @token_required
 def statistics(token):
     data = load_dict(token)
-    request_dict = request.json.update({'url': data['repository_url']})
+    request_dict = request.json
+    request_dict['url'] = data['repository_url']
     statistics_form = StatisticsForm.from_json(request_dict)
     if not statistics_form.validate():
         return statistics_form.errors, 400
@@ -167,7 +169,8 @@ def statistics(token):
 @token_required
 def services(token):
     data = load_dict(token)
-    request_dict = request.json.update({'url': data['repository_url']})
+    request_dict = request.json
+    request_dict['url'] = data['repository_url']
     services_form = ServicesForm.from_json(request_dict)
     if not services_form.validate():
         return services_form.errors, 400

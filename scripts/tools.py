@@ -64,10 +64,13 @@ def format_response(result_dict, data):
                     'value': actual_result['value'],
                 }
                 if 'details' in actual_result:
-                    result_dict[i]['details'] = [x for x in actual_result['details'] if
-                                                 actual_result['details'][x] is None]
-            elif 'url' in result_dict[i]:
-                result_dict[i] = result_dict[i]['value']
+                    if type(actual_result['details']) == dict:
+                        result_dict[i]['details'] = [x for x in actual_result['details'] if
+                                                     actual_result['details'][x] is None]
+                    else:
+                        result_dict[i]['details'] = actual_result['details']
+            # elif 'url' in result_dict[i]:
+            #     result_dict[i] = result_dict[i]['value']
     result_dict['repository_name'] = data['repository_names'][0]
     return result_dict
 

@@ -167,20 +167,18 @@ def validate_metadata(url_dict_list):
     fields_metadata, item_fields = METADATA_FIELDS.copy(), FIELDS_ITEM.copy()
     fields_metadata.append('DC.date')
     for i in fields_metadata:
-        fields_metadata_dict[i] = True
+        fields_metadata_dict[i] = {'value': True, 'details': []}
     for i in item_fields:
-        fields_dict[i] = 1
+        fields_dict[i] = {'value': 1, 'details': []}
     for url_dict in url_dict_list:
         for i in fields_metadata:
             if url_dict['metadata'][i] is None:
-                fields_metadata_dict[i] = False
-                fields_metadata.remove(i)
+                fields_metadata_dict[i]['value'] = False
+                fields_metadata_dict[i]['details'].append(url_dict['url'])
         for j in item_fields:
             if url_dict[j] is None:
-                fields_dict[j] = 0
-                item_fields.remove(j)
-        if len(item_fields) == 0 and len(fields_metadata) == 0:
-            break
+                fields_dict[j]['value'] = 0
+                fields_dict[j]['details'].append(url_dict['url'])
     return fields_metadata_dict, fields_dict
 
 
@@ -188,7 +186,7 @@ def evaluate_metadata_group(metadata_dict, fields):
     new_dict = {'value': 1, 'details': {}}
     for i in fields:
         new_dict['details'][i] = metadata_dict[i]
-        if not metadata_dict[i]:
+        if not metadata_dict[i]['value']:
             new_dict['value'] = 0
     return new_dict
 

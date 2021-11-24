@@ -12,7 +12,7 @@ def domain_valid(form, field):
         return False
 
 def boolean_required(form, field):
-    if 0 == len(field.raw_data):
+    if field.raw_data is None or 0 == len(field.raw_data):
         field.errors.append('El campo es requerido')
         return False
     if type(field.raw_data[0]) != bool:
