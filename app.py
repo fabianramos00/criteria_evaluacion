@@ -58,7 +58,7 @@ def token_required(f):
 def save_result(token, data, result, item):
     data.update({item: result})
     data['total'] += result['total']
-    # save_record(data, db, token, item == CRITERIA_LIST[-1], item)
+    save_record(data, db, token, item == CRITERIA_LIST[-1], item)
     result['accumulative'] = data['total']
     return format_response(result, data)
 
