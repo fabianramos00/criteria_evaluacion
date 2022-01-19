@@ -55,6 +55,15 @@ def token_required(f):
     return decorated_function
 
 
+def clean_request_data(data=None, form=None, repository_url=None):
+    for i in list(data):
+        if 'url' not in i and not data[i] and i + '_url' in data:
+            del data[i + '_url']
+    if repository_url:
+        data.update({'url': repository_url})
+    return data, form.from_json(data)
+
+
 def save_result(token, data, result, item):
     data.update({item: result})
     data['total'] += result['total']
@@ -82,7 +91,12 @@ def home():
 @app.route('/visibility/<token>', methods=['POST'])
 @token_required
 def visibility(token):
-    visibility_json, visibility_form = request.json, VisibilityForm.from_json(request.json)
+    visibility_json = request.json
+    if not visibility_json['national_collector']:
+        for key in list(visibility_json):
+            if 'collector_url' in key:
+                del visibility_json[key]
+    visibility_form = VisibilityForm.from_json(request.json)
     if not visibility_form.validate():
         return visibility_form.errors, 400
     data = load_dict(token)
@@ -95,9 +109,8 @@ def visibility(token):
 @token_required
 def policy(token):
     data = load_dict(token)
-    request_dict = request.json
-    request_dict.update({'url': data['repository_url']})
-    policy_form = PolicyForm.from_json(request_dict)
+    request_dict, policy_form = clean_request_data(data=request.json, form=PolicyForm,
+                                                   repository_url=data['repository_url'])
     if not policy_form.validate():
         return policy_form.errors, 400
     result = execute_policy(request_dict, data['repository_names'])
@@ -107,7 +120,7 @@ def policy(token):
 @app.route('/legal_aspects/<token>', methods=['POST'])
 @token_required
 def legal_aspects(token):
-    legal_aspects_json, legal_aspects_form = request.json, LegalAspectsForm.from_json(request.json)
+    legal_aspects_json, legal_aspects_form = clean_request_data(data=request.json, form=LegalAspectsForm)
     if not legal_aspects_form.validate():
         return legal_aspects_form.errors, 400
     data = load_dict(token)
@@ -142,9 +155,8 @@ def interoperability(token):
 @token_required
 def security(token):
     data = load_dict(token)
-    request_dict = request.json
-    request_dict['url'] = data['repository_url']
-    security_form = SecurityForm.from_json(request_dict)
+    request_dict, security_form = clean_request_data(data=request.json, form=SecurityForm,
+                                                   repository_url=data['repository_url'])
     if not security_form.validate():
         return security_form.errors, 400
     result = execute_security(request_dict)
@@ -155,9 +167,8 @@ def security(token):
 @token_required
 def statistics(token):
     data = load_dict(token)
-    request_dict = request.json
-    request_dict['url'] = data['repository_url']
-    statistics_form = StatisticsForm.from_json(request_dict)
+    request_dict, statistics_form = clean_request_data(data=request.json, form=StatisticsForm,
+                                                   repository_url=data['repository_url'])
     if not statistics_form.validate():
         return statistics_form.errors, 400
     result, links_dict = execute_statistics(request_dict, data['links'])
@@ -169,9 +180,8 @@ def statistics(token):
 @token_required
 def services(token):
     data = load_dict(token)
-    request_dict = request.json
-    request_dict['url'] = data['repository_url']
-    services_form = ServicesForm.from_json(request_dict)
+    request_dict, services_form = clean_request_data(data=request.json, form=ServicesForm,
+                                                   repository_url=data['repository_url'])
     if not services_form.validate():
         return services_form.errors, 400
     result = execute_services(request_dict, data['links'])

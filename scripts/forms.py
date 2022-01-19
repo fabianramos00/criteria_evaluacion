@@ -2,14 +2,9 @@ from wtforms import Form, StringField, BooleanField
 from wtforms.validators import DataRequired, URL, Optional, InputRequired, ValidationError
 import wtforms_json
 
-from scripts.tools import ping, check_website
+from scripts.tools import check_website
 
 wtforms_json.init()
-
-def domain_valid(form, field):
-    if field.data is not None and not ping(field.data):
-        field.errors.append('No es posible acceder a la página')
-        return False
 
 def boolean_required(form, field):
     if field.raw_data is None or 0 == len(field.raw_data):
@@ -47,12 +42,11 @@ class RequiredIf(DataRequired):
         if other_field is None:
             raise Exception('no field named "%s" in form' % self.other_field_name)
         if other_field.data:
-            # super(RequiredIf, self).__call__(form, field)
             DataRequired.__call__(self, form, field)
         Optional()(form, field)
 
 class RegistrationForm(Form):
-    repository_url = StringField('URL', validators=[DataRequired('El campo es requerido'), URL(message='URL inválida'), domain_valid])
+    repository_url = StringField('URL', validators=[DataRequired('El campo es requerido'), URL(message='URL inválida'), website_valid])
     repository_name = StringField('Nombre', validators=[DataRequired('El campo es requerido')])
     repository_name1 = StringField('Nombre 1')
 
@@ -69,11 +63,11 @@ class RegistrationForm(Form):
 class VisibilityForm(Form):
     national_collector = BooleanField('Presencia en recolectores nacionales', validators=[boolean_required])
     initiatives_existence = BooleanField('Existencia de iniciativas', validators=[boolean_required])
-    collector_url1 = StringField('URL_1', validators=[RequiredIf('national_collector'), URL(message='URL inválida'), domain_valid])
-    collector_url2 = StringField('URL_2', validators=[Optional(), URL(message='URL inválida'), domain_valid])
-    collector_url3 = StringField('URL_3', validators=[Optional(), URL(message='URL inválida'), domain_valid])
-    collector_url4 = StringField('URL_4', validators=[Optional(), URL(message='URL inválida'), domain_valid])
-    collector_url5 = StringField('URL_5', validators=[Optional(), URL(message='URL inválida'), domain_valid])
+    collector_url1 = StringField('URL_1', validators=[RequiredIf('national_collector'), URL(message='URL inválida'), website_valid])
+    collector_url2 = StringField('URL_2', validators=[Optional(), URL(message='URL inválida'), website_valid])
+    collector_url3 = StringField('URL_3', validators=[Optional(), URL(message='URL inválida'), website_valid])
+    collector_url4 = StringField('URL_4', validators=[Optional(), URL(message='URL inválida'), website_valid])
+    collector_url5 = StringField('URL_5', validators=[Optional(), URL(message='URL inválida'), website_valid])
 
 class PolicyForm(Form):
     open_access = BooleanField(validators=[boolean_required])

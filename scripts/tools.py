@@ -9,14 +9,6 @@ from requests.exceptions import ConnectionError
 from models.models import Record
 
 
-def ping(host):
-    try:
-        request = get(host, verify=False)
-        return True
-    except ConnectionError:
-        return False
-
-
 # def ping(host):
 # host = host.replace('https://', '').replace('http://', '')
 # try:
@@ -32,8 +24,11 @@ def ping(host):
 #     return False
 
 def check_website(url):
-    response = get(url, verify=False)
-    return True if response.status_code == 200 else False
+    try:
+        response = get(url, verify=False)
+        return True if response.status_code == 200 else False
+    except ConnectionError as e:
+        return False
 
 
 def save_record(data, db, token=None, is_completed=False, last_item_evaluated=''):
