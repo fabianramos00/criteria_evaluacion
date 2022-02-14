@@ -28,6 +28,8 @@ disable_warnings(InsecureRequestWarning)
 app = Flask(__name__)
 CORS(app)
 
+app.config['CORS_HEADERS'] = 'Content-Type'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = config('DATABASE_URL')
 # app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///db.sqlite3'
