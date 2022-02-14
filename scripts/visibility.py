@@ -6,6 +6,7 @@ from xml.etree.ElementTree import fromstring
 
 from bs4 import BeautifulSoup
 from requests import get
+from requests.exceptions import ConnectionError
 from models.models import OAI_PMH, ROAR
 
 
@@ -217,7 +218,10 @@ def search_in(function, repository_names):
 
 
 def is_open_access(found_in, url):
-    page = get(url)
+    try:
+        page = get(url)
+    except ConnectionError as e:
+        return None
     page_parse = BeautifulSoup(page.content, 'html.parser')
     meta_list = page_parse.find_all('meta', {'name': 'DC.rights'})
     for i in meta_list:
@@ -241,10 +245,11 @@ def open_access(visibility_dict):
             if visibility_dict[i] is not None and 'links' in visibility_dict[i]:
                 for url in visibility_dict[i]['links']:
                     task_result = executor.submit(is_open_access, i, url).result()
-                    if not task_result['open_access']:
-                        link_list.append((i, task_result['url']))
-                        value = 0
-                    dict_list.append(task_result)
+                    if task_result:
+                        if not task_result['open_access']:
+                            link_list.append((i, task_result['url']))
+                            value = 0
+                        dict_list.append(task_result)
     return {'value': value, 'details': link_list}, dict_list
 
 
