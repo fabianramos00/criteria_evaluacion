@@ -28,7 +28,9 @@ class Record(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     data = Column(MutableDict.as_mutable(JSON), default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
     rating = Column(Float, default=0)
     repository_url = Column(String(500), nullable=False)
     repository_names = Column(ARRAY(String(500)), nullable=False)

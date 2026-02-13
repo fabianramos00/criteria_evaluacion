@@ -48,7 +48,12 @@ def upgrade() -> None:
             server_default=sa.text("now()"),
             nullable=True,
         ),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+        ),
         sa.Column("rating", sa.Float(), nullable=True),
         sa.Column("repository_url", sa.String(length=500), nullable=False),
         sa.Column("repository_names", sa.ARRAY(sa.String(length=500)), nullable=False),
