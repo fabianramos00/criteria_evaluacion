@@ -10,7 +10,9 @@ def evaluate_items(links: list[dict], items_dict: dict) -> dict:
     for link in links:
         for key in list(items_dict.keys()):
             field_list, threshold = items_dict[key]
-            count = sum(1 for field in field_list if link.get(key, {}).get(field) is not None)
+            count = sum(
+                1 for field in field_list if link.get(key, {}).get(field) is not None
+            )
             if count >= threshold:
                 continue
             elif count == 0:
@@ -22,19 +24,20 @@ def evaluate_items(links: list[dict], items_dict: dict) -> dict:
             break
     return values
 
+
 def evaluate_services(services_schema: ServicesSchema, link_list: list[dict]) -> dict:
     services_resume = get_schema_resume(services_schema.dict())
     evaluated_items = evaluate_items(
         link_list,
         {
-            'bibliographic_managers': (BIBLIOGRAPHIC_MANAGERS, 2),
-            'metadata_exports': (METADATA_EXPORT_TYPES, 2),
-            'social_networks': (SOCIAL_NETWORKS, 2)
-        }
+            "bibliographic_managers": (BIBLIOGRAPHIC_MANAGERS, 2),
+            "metadata_exports": (METADATA_EXPORT_TYPES, 2),
+            "social_networks": (SOCIAL_NETWORKS, 2),
+        },
     )
     for key, value in evaluated_items.items():
         services_resume[key] = value
-    services_resume['total'] = sum(
-        v['value'] if isinstance(v, dict) else v for v in services_resume.values()
+    services_resume["total"] = sum(
+        v["value"] if isinstance(v, dict) else v for v in services_resume.values()
     )
     return services_resume

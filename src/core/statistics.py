@@ -1,3 +1,4 @@
+import asyncio
 from src.core.tools import get_schema_resume
 from src.api.schemas import StatisticsSchema
 import httpx
@@ -6,9 +7,9 @@ import httpx
 async def statistics_url_exist(url: str) -> str | None:
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.get(url + '/statistics')
+            response = await client.get(url + "/statistics")
             if response.status_code < 400:
-                return url + '/statistics'
+                return url + "/statistics"
             return None
     except httpx.ConnectError:
         return None
@@ -21,25 +22,24 @@ async def limited_statistics_url_exist(url: str) -> str | None:
 
 async def evaluate_urls_statistics(link_list: list[dict]) -> dict:
     if not link_list:
-        return {'value': 0, 'details': []}
-    tasks = [limited_statistics_url_exist(link['url']) for link in link_list]
+        return {"value": 0, "details": []}
+    tasks = [limited_statistics_url_exist(link["url"]) for link in link_list]
     results = await asyncio.gather(*tasks)
     value, details = 1, []
     for link, stat in zip(link_list, results):
-        link['statistics'] = stat
+        link["statistics"] = stat
         if stat is None:
             value = 0
-            details.append(link['url'])
-    return {'value': value, 'details': details}
-    
+            details.append(link["url"])
+    return {"value": value, "details": details}
+
 
 async def evaluate_statistics(
-    statistics_schema: StatisticsSchema, 
-    link_list: list[dict]
+    statistics_schema: StatisticsSchema, link_list: list[dict]
 ) -> tuple[dict, list[dict]]:
     statistics_resume = get_schema_resume(statistics_schema.dict())
-    statistics_resume['url_statistics'] = await evaluate_urls_statistics(link_list)
-    statistics_resume['total'] = sum(
-        v['value'] if isinstance(v, dict) else v for v in statistics_resume.values()
+    statistics_resume["url_statistics"] = await evaluate_urls_statistics(link_list)
+    statistics_resume["total"] = sum(
+        v["value"] if isinstance(v, dict) else v for v in statistics_resume.values()
     )
-    return statistics_resume, url_list
+    return statistics_resume, link_list

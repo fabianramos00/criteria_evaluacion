@@ -19,7 +19,7 @@ def get_schema_resume(schema: dict) -> dict:
         if url_key in schema:
             resume[key] = {
                 "value": value,
-                "url": str(schema.get(url_key)) if value else None
+                "url": str(schema.get(url_key)) if value else None,
             }
         else:
             resume[key] = value
@@ -32,4 +32,3 @@ def check_website(url: str) -> bool:
         return response.status_code in (200, 301, 302)
     except httpx.RequestError:
         return False
-        
