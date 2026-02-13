@@ -104,7 +104,7 @@ async def metadata(
     existing_result = check_workflow(record, 3)
     if existing_result:
         return existing_result
-    result, links = await evaluate_metadata(metadata_schema, record.metadata)
+    result, links = await evaluate_metadata(metadata_schema, record.links)
     return await update_record_and_format_response(db, record, 3, result, links)
 
 
@@ -164,7 +164,7 @@ async def services(
     return await update_record_and_format_response(db, record, 7, result)
 
 
-@router.get("/{item}/{token}")
+@router.get("/detail/{item}/{token}")
 async def get_data(
     item: str,
     token: str,

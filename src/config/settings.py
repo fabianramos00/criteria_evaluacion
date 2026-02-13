@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     BOAI_URL: str = "https://www.budapestopenaccessinitiative.org/sign/signatures/"
     FRIENDLY_URL_LENGTH: int = 40
     MIN_YEAR_DIFFERENCE: int = 5
-    REPOSITORY_NAME_MIN_RATIO: float = 0.1
+    REPOSITORY_NAME_MIN_RATIO: float = 0.8
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 

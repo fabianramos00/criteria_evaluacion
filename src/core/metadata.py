@@ -137,9 +137,9 @@ def search_items(items: list[str], page: BeautifulSoup) -> dict[str, str | None]
 
 
 async def get_metadata(link_dict: dict) -> dict:
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(verify=False) as client:
         try:
-            page = await client.get(link_dict["url"], verify=False)
+            page = await client.get(link_dict["url"])
         except httpx.RequestError:
             return link_dict
     page_parse = BeautifulSoup(page.content, "html.parser")

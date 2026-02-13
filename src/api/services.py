@@ -1,6 +1,7 @@
 from fastapi import HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 from src.database.models import Record
 from src.api.schemas import RecordOut
 from src.constants import CRITERIA_LIST
@@ -84,14 +85,16 @@ async def update_record(
     links: list[dict] | None = None,
 ) -> Record:
     item = CRITERIA_LIST[item_index]
-    record.data.update({item: result})
+    record.data = {**record.data, item: result}
     record.rating += result["total"]
     if links is not None:
         record.links = links
+        flag_modified(record, "links")
     record.last_item_evaluated = item
     record.is_completed = item_index == len(CRITERIA_LIST) - 1
     db.add(record)
     await db.commit()
+    await db.refresh(record)
     return record
 
 

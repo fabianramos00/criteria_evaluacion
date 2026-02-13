@@ -67,7 +67,10 @@ async def get_re3data(repository_name: str):
 async def get_la_referencia_links(repository_name):
     URL_LA_REP = f'{settings.LA_REFERENCIA_URL}?limit=5&filter%5B%5D=reponame_str%3A"{repository_name}"&type=AllFields&sort=year'
     async with httpx.AsyncClient() as client:
-        page_la = await client.get(URL_LA_REP)
+        try:
+            page_la = await client.get(URL_LA_REP, timeout=10)
+        except (httpx.ConnectTimeout, httpx.ReadTimeout):
+            return []
         page_parser_la = BeautifulSoup(page_la.content, "html.parser")
         link_list, la_links = [], []
         for i in page_parser_la.find_all("div", {"class": "result"}):
@@ -340,7 +343,7 @@ async def evaluate_visibility(
     result_pool: dict = await execute_async_search(functions_dict, repository_names)
     resume_visibility = {
         "directory": {
-            "data": {
+            "details": {
                 "OpenDoar": result_pool["OpenDoar"],
                 "ROAR": await get_roar_data(db, repository_names),
                 "OAI-PMH": await get_oai_pmh_data(db, repository_names),
@@ -348,7 +351,7 @@ async def evaluate_visibility(
             }
         },
         "collector": {
-            "data": {
+            "details": {
                 "LA-Referencia": result_pool["LA-Referencia"],
                 "OpenAIRE": result_pool["OpenAIRE"],
                 "OpenAlex": await get_open_alex_data(record.repository_url),
@@ -363,15 +366,17 @@ async def evaluate_visibility(
         "url": friendly_secure_url(record.repository_url),
     }
     data_links: dict = (
-        resume_visibility["directory"]["data"].copy()
-        | resume_visibility["collector"]["data"].copy()
+        resume_visibility["directory"]["details"].copy()
+        | resume_visibility["collector"]["details"].copy()
     )
     resume_visibility["standard"] = standard_name(data_links)
     resume_visibility["directory"].update(
-        count_items(resume_visibility["directory"]["data"], "national directories")
+        count_items(resume_visibility["directory"]["details"], "national directories")
     )
     resume_visibility["collector"].update(
-        count_items(resume_visibility["collector"]["data"], "international collectors")
+        count_items(
+            resume_visibility["collector"]["details"], "international collectors"
+        )
     )
     resume_visibility["open_access"], links_dict = await open_access(data_links)
     resume_visibility["total"] = sum(

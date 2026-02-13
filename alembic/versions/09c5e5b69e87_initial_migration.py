@@ -52,9 +52,7 @@ def upgrade() -> None:
         sa.Column("rating", sa.Float(), nullable=True),
         sa.Column("repository_url", sa.String(length=500), nullable=False),
         sa.Column("repository_names", sa.ARRAY(sa.String(length=500)), nullable=False),
-        sa.Column(
-            "links", sa.ARRAY(postgresql.JSON(astext_type=sa.Text())), nullable=True
-        ),
+        sa.Column("links", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
         sa.Column("last_item_evaluated", sa.String(length=20), nullable=False),
         sa.Column("is_completed", sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint("id"),

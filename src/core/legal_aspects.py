@@ -3,6 +3,8 @@ from src.core.tools import get_schema_resume
 
 
 def check_author_rights(link_list: list[dict]) -> dict:
+    if not link_list:
+        return {"value": 0, "details": []}
     result = {"value": 1, "details": []}
     for link in link_list:
         if not link.get("author_rights", False):

@@ -28,7 +28,9 @@ def check_identifier(links: list[dict]) -> dict:
         return result
     for item in links:
         identifier = item["metadata"].get("DC.identifier", "")
-        if not any(ext in identifier for ext in DOCUMENT_IDENTIFIER_LIST):
+        if not identifier or not any(
+            ext in identifier for ext in DOCUMENT_IDENTIFIER_LIST
+        ):
             result["value"] = 0
             result["details"].append(item["url"])
 

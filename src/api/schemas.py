@@ -126,6 +126,7 @@ class PolicySchema(BaseModel):
     vision_mission_url: AnyHttpUrl | None = None
     contact: bool
     contact_url: AnyHttpUrl | None = None
+    boai: bool
 
     _validate_urls = field_validator(
         "open_access_url",
