@@ -30,7 +30,7 @@ from src.core.interoperability import evaluate_interoperability
 from src.core.security import evaluate_security
 from src.core.statistics import evaluate_statistics
 from src.core.services import evaluate_services
-from src.constants import CRITERIA_LIST
+from src.constants import CRITERIA_LIST, CRITERIA_LIST_DESCRIPTIONS
 
 router = APIRouter()
 
@@ -210,13 +210,18 @@ async def get_list(
 async def get_summary(token: str, record: Record = Depends(get_record_or_404)):
     record_dict = RecordOut.model_validate(record).model_dump()
     summary_list = []
-    for i in CRITERIA_LIST:
-        item_data = record.data.get(i, {})
+    max_rating = 0
+    for criterion in CRITERIA_LIST:
+        criteria_info = CRITERIA_LIST_DESCRIPTIONS[criterion]
+        max_rating += criteria_info["max_rating"]
         summary_list.append(
             {
-                "item": i,
-                "total": item_data.get("total", 0),
+                "item": criterion,
+                "name": criteria_info["name"],
+                "max_rating": criteria_info["max_rating"],
+                "total": record.data.get(criterion, {}).get("total", 0),
             }
         )
+    record_dict["max_rating"] = max_rating
     record_dict["summary"] = summary_list
     return record_dict

@@ -9,6 +9,41 @@ CRITERIA_LIST = [
     "services",
 ]
 
+CRITERIA_LIST_DESCRIPTIONS = {
+    "visibility": {
+        "name": "Visibilidad",
+        "max_rating": 9.5,
+    },
+    "policy": {
+        "name": "Políticas",
+        "max_rating": 9,
+    },
+    "legal_aspects": {
+        "name": "Aspectos legales",
+        "max_rating": 5,
+    },
+    "metadata": {
+        "name": "Metadatos",
+        "max_rating": 16,
+    },
+    "interoperability": {
+        "name": "Interoperabilidad",
+        "max_rating": 13,
+    },
+    "security": {
+        "name": "Seguridad",
+        "max_rating": 4,
+    },
+    "statistics": {
+        "name": "Estadísticas",
+        "max_rating": 4,
+    },
+    "services": {
+        "name": "Servicios",
+        "max_rating": 7,
+    },
+}
+
 METADATA_FIELDS = [
     "DC.creator",
     "DC.title",
