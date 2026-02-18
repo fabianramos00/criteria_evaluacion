@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     FRIENDLY_URL_LENGTH: int = 40
     MIN_YEAR_DIFFERENCE: int = 5
     REPOSITORY_NAME_MIN_RATIO: float = 0.8
+    CORS_ORIGINS: list[str] = ["*"]
+    CORS_METHODS: list[str] = ["GET", "POST", "PUT", "DELETE"]
+    CORS_HEADERS: list[str] = ["Authorization", "Content-Type"]
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
