@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
 from src.database.models import Record
@@ -16,13 +16,31 @@ async def get_record_by_id(db: AsyncSession, id: str):
         return None
 
 
-async def get_records(db: AsyncSession, page: int, limit: int) -> dict:
+async def get_records(
+    db: AsyncSession, page: int, limit: int, search: str | None = None
+) -> dict:
     offset = (page - 1) * limit
-    result = await db.execute(
-        select(Record).order_by(Record.updated_at.desc()).offset(offset).limit(limit)
-    )
+    query = select(Record).order_by(Record.updated_at.desc())
+    if search:
+        query = query.where(
+            or_(
+                Record.repository_url.ilike(f"%{search}%"),
+                cast(Record.repository_names, String).ilike(f"%{search}%"),
+            )
+        )
+
+    result = await db.execute(query.offset(offset).limit(limit))
     records = result.scalars().all()
-    total_result = await db.execute(select(func.count(Record.id)))
+    count_query = select(func.count(Record.id))
+    if search:
+        count_query = count_query.where(
+            or_(
+                Record.repository_url.ilike(f"%{search}%"),
+                cast(Record.repository_names, String).ilike(f"%{search}%"),
+            )
+        )
+
+    total_result = await db.execute(count_query)
     total_records = total_result.scalar_one()
     pages = (total_records + limit - 1) // limit
     has_next = page < pages

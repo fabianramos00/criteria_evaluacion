@@ -197,8 +197,13 @@ async def get_data(
 
 
 @router.get("/list")
-async def get_list(page: int = 1, limit: int = 10, db: AsyncSession = Depends(get_db)):
-    return await get_records(db, page, limit)
+async def get_list(
+    page: int = 1,
+    limit: int = 10,
+    search: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    return await get_records(db, page, limit, search)
 
 
 @router.get("/summary/{token}")
