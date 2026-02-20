@@ -214,7 +214,17 @@ async def get_list(
 @router.get("/summary/{token}")
 async def get_summary(token: str, record: Record = Depends(get_record_or_404)):
     if not record.is_completed:
-        raise HTTPException(status_code=400, detail="Record is not completed")
+        last_idx = CRITERIA_LIST.index(record.last_item_evaluated)
+        return JSONResponse(
+            status_code=400,
+            content={
+                "is_completed": False,
+                "last_item_evaluated": record.last_item_evaluated,
+                "next_item": CRITERIA_LIST[last_idx + 1]
+                if last_idx < len(CRITERIA_LIST) - 1
+                else None,
+            },
+        )
     record_dict = RecordOut.model_validate(record).model_dump()
     summary_list = []
     max_rating = 0
