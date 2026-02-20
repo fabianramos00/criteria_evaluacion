@@ -188,6 +188,9 @@ async def get_data(
                 "is_next": is_next,
                 "is_completed": is_completed,
                 "last_item_evaluated": record.last_item_evaluated,
+                "next_item": CRITERIA_LIST[last_idx + 1]
+                if last_idx < len(CRITERIA_LIST) - 1
+                else None,
             },
         )
     item_data = record.data[item]
