@@ -213,6 +213,8 @@ async def get_list(
 
 @router.get("/summary/{token}")
 async def get_summary(token: str, record: Record = Depends(get_record_or_404)):
+    if not record.is_completed:
+        raise HTTPException(status_code=400, detail="Record is not completed")
     record_dict = RecordOut.model_validate(record).model_dump()
     summary_list = []
     max_rating = 0
