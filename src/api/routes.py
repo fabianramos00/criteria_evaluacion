@@ -171,22 +171,24 @@ async def get_data(
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
 ):
-    if item not in CRITERIA_LIST:
+    try:
+        item_index = CRITERIA_LIST.index(item)
+    except ValueError:
         raise HTTPException(status_code=400, detail="Invalid item")
-    is_next = False
-    if not record.is_completed:
-        if record.last_item_evaluated == "started" and item == CRITERIA_LIST[0]:
-            is_next = True
-        elif record.last_item_evaluated in CRITERIA_LIST:
-            last_idx = CRITERIA_LIST.index(record.last_item_evaluated)
-            if (
-                last_idx + 1 < len(CRITERIA_LIST)
-                and item == CRITERIA_LIST[last_idx + 1]
-            ):
-                is_next = True
+    is_next, is_completed = False, record.is_completed
+    last_idx = CRITERIA_LIST.index(record.last_item_evaluated)
+    if record.last_item_evaluated == "started" and item_index == 0:
+        is_next = True
+    elif item_index == last_idx + 1:
+        is_next = True
     if item not in record.data:
         return JSONResponse(
-            status_code=404, content={"is_next": is_next, "is_completed": False}
+            status_code=404,
+            content={
+                "is_next": is_next,
+                "is_completed": is_completed,
+                "last_item_evaluated": record.last_item_evaluated,
+            },
         )
     item_data = record.data[item]
     item_data.update(
