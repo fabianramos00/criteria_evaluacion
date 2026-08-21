@@ -1,8 +1,7 @@
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy import func
+from sqlalchemy import func, Index
 from sqlalchemy import Column, String, Integer, Boolean, ARRAY, Float, DateTime
 from sqlalchemy.dialects.postgresql import JSON, UUID
-from sqlalchemy.ext.mutable import MutableDict, MutableList
 from uuid import uuid4
 from src.database.session import Base
 
@@ -25,8 +24,14 @@ class ROAR(Base):
 
 class Record(Base):
     __tablename__ = "Record"
+    __table_args__ = (
+        Index("ix_record_repository_url", "repository_url"),
+        Index("ix_record_last_item_evaluated", "last_item_evaluated"),
+        Index("ix_record_is_completed", "is_completed"),
+        Index("ix_record_updated_at", "updated_at"),
+    )
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    data = Column(MutableDict.as_mutable(JSON), default={})
+    data = Column(JSON, default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -34,6 +39,6 @@ class Record(Base):
     rating = Column(Float, default=0)
     repository_url = Column(String(500), nullable=False)
     repository_names = Column(ARRAY(String(500)), nullable=False)
-    links = Column(MutableList.as_mutable(JSONB), nullable=True)
+    links = Column(JSONB, nullable=True)
     last_item_evaluated = Column(String(20), nullable=False, default="started")
     is_completed = Column(Boolean, nullable=False, default=False)

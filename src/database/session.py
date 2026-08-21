@@ -8,8 +8,8 @@ from src.config.settings import settings
 engine = create_async_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
-    pool_size=3,
-    max_overflow=2,
+    pool_size=10,
+    max_overflow=20,
     pool_recycle=1800,
     connect_args={"ssl": "require", "timeout": 20},
 )
