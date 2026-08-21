@@ -1,5 +1,4 @@
 import pytest
-from unittest.mock import patch
 from src.core.tools import get_schema_resume, is_similar
 from src.core.policy import evaluate_policy
 from src.core.security import evaluate_security
@@ -59,42 +58,40 @@ class TestIsSimilar:
 class TestEvaluatePolicy:
     @pytest.mark.asyncio
     async def test_calculates_total(self):
-        with patch("src.api.schemas.check_website", return_value=True):
-            schema = PolicySchema(
-                open_access=True,
-                open_access_url="https://example.com/oa",
-                metadata_reuse=False,
-                content_preservation=False,
-                deposit_data=False,
-                action_policy=False,
-                policy_data=False,
-                vision_mission=False,
-                contact=False,
-                boai=False,
-            )
+        schema = PolicySchema(
+            open_access=True,
+            open_access_url="https://example.com/oa",
+            metadata_reuse=False,
+            content_preservation=False,
+            deposit_data=False,
+            action_policy=False,
+            policy_data=False,
+            vision_mission=False,
+            contact=False,
+            boai=False,
+        )
 
-            result = await evaluate_policy(["Test Repo"], schema)
+        result = await evaluate_policy(["Test Repo"], schema)
 
-            assert "total" in result
-            assert isinstance(result["total"], (int, float))
+        assert "total" in result
+        assert isinstance(result["total"], (int, float))
 
 
 class TestEvaluateSecurity:
     def test_calculates_total(self):
-        with patch("src.api.schemas.check_website", return_value=True):
-            schema = SecuritySchema(
-                backups=True,
-                backups_url="https://example.com/backups",
-                checksum=False,
-                backups_location=True,
-                format_control=True,
-            )
+        schema = SecuritySchema(
+            backups=True,
+            backups_url="https://example.com/backups",
+            checksum=False,
+            backups_location=True,
+            format_control=True,
+        )
 
-            result = evaluate_security(schema)
+        result = evaluate_security(schema)
 
-            assert "total" in result
-            assert isinstance(result["total"], (int, float))
-            assert result["backups"]["value"] == 1
+        assert "total" in result
+        assert isinstance(result["total"], (int, float))
+        assert result["backups"]["value"] == 1
 
 
 class TestEvaluateServices:
@@ -112,26 +109,25 @@ class TestEvaluateServices:
         assert result["rss_alert"] == 1
 
     def test_evaluates_items_with_links(self):
-        with patch("src.api.schemas.check_website", return_value=True):
-            schema = ServicesSchema(
-                rss_alert=True,
-                author_profiles=True,
-                author_profiles_url="https://example.com/profiles",
-                cite_metrics=False,
-                new_metrics=False,
-            )
+        schema = ServicesSchema(
+            rss_alert=True,
+            author_profiles=True,
+            author_profiles_url="https://example.com/profiles",
+            cite_metrics=False,
+            new_metrics=False,
+        )
 
-            links = [
-                {
-                    "url": "https://example.com/doc1",
-                    "bibliographic_managers": {"zotero": "link", "mendeley": "link"},
-                }
-            ]
+        links = [
+            {
+                "url": "https://example.com/doc1",
+                "bibliographic_managers": {"zotero": "link", "mendeley": "link"},
+            }
+        ]
 
-            result = evaluate_services(schema, links)
+        result = evaluate_services(schema, links)
 
-            assert "total" in result
-            assert "bibliographic_managers" in result
+        assert "total" in result
+        assert "bibliographic_managers" in result
 
 
 class TestEvaluateItems:
@@ -172,18 +168,17 @@ class TestCheckAuthorRights:
 
 class TestEvaluateLegalAspects:
     def test_calculates_total_with_links(self):
-        with patch("src.api.schemas.check_website", return_value=True):
-            schema = LegalAspectsSchema(
-                author_property=True,
-                author_permission=True,
-                author_permission_url="https://example.com/auth",
-                editorial_policy=True,
-                author_copyright=True,
-            )
+        schema = LegalAspectsSchema(
+            author_property=True,
+            author_permission=True,
+            author_permission_url="https://example.com/auth",
+            editorial_policy=True,
+            author_copyright=True,
+        )
 
-            links = [{"url": "https://example.com", "author_rights": True}]
+        links = [{"url": "https://example.com", "author_rights": True}]
 
-            result = evaluate_legal_aspects(schema, links)
+        result = evaluate_legal_aspects(schema, links)
 
-            assert "total" in result
-            assert result["author_property"] == 1
+        assert "total" in result
+        assert result["author_property"] == 1

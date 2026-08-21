@@ -1,7 +1,7 @@
 import httpx
 from difflib import SequenceMatcher
 from src.config.settings import settings
-from src.core.http import get_sync_client
+from src.core.http import get_async_client, get_sync_client
 
 
 def is_similar(repository_name: str, repository_name2: str) -> bool:
@@ -34,6 +34,14 @@ def get_schema_resume(schema: dict) -> dict:
 def check_website(url: str) -> bool:
     try:
         response = get_sync_client().get(url, timeout=5)
+        return response.status_code in (200, 301, 302)
+    except httpx.RequestError:
+        return False
+
+
+async def check_website_async(url: str) -> bool:
+    try:
+        response = await get_async_client(verify=False).get(url, timeout=5)
         return response.status_code in (200, 301, 302)
     except httpx.RequestError:
         return False

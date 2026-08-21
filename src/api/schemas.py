@@ -3,15 +3,13 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, AnyHttpUrl, field_validator, Field
 from pydantic_core import PydanticCustomError
+from fastapi.exceptions import RequestValidationError
 
-from src.core.tools import check_website
+from src.core.tools import check_website_async
 
 
-def validate_website_url(v):
-    """Validate that a website URL is accessible"""
-    if v is not None and not check_website(str(v)):
-        raise ValueError("URL no accesible")
-    return v
+def _is_url_field(name: str) -> bool:
+    return name.rstrip("0123456789").endswith("_url")
 
 
 def validate_url_contains(url: str, base_url: str | None) -> str:
@@ -59,12 +57,28 @@ def required_url(condition_field: str):
     return combined_validator(conditional_required(condition_field), url_must_contain())
 
 
-class RegistrationSchema(BaseModel):
+class AsyncSchema(BaseModel):
+    async def validate_async(self) -> None:
+        for name in type(self).model_fields:
+            if _is_url_field(name):
+                value = getattr(self, name)
+                if value is not None and not await check_website_async(str(value)):
+                    raise RequestValidationError(
+                        [
+                            {
+                                "loc": ("body", name),
+                                "msg": "URL no accesible",
+                                "type": "value_error",
+                                "input": str(value),
+                            }
+                        ]
+                    )
+
+
+class RegistrationSchema(AsyncSchema):
     repository_url: AnyHttpUrl
     repository_name: str = Field(..., min_length=1)
     repository_name1: str | None = None
-
-    _validate_url = field_validator("repository_url")(validate_website_url)
 
     @field_validator("repository_name1")
     @classmethod
@@ -78,7 +92,7 @@ class RegistrationSchema(BaseModel):
         return [x for x in [self.repository_name, self.repository_name1] if x]
 
 
-class VisibilitySchema(BaseModel):
+class VisibilitySchema(AsyncSchema):
     national_collector: bool
     initiatives_existence: bool
     collector_url1: AnyHttpUrl | None = None
@@ -87,13 +101,6 @@ class VisibilitySchema(BaseModel):
     collector_url4: AnyHttpUrl | None = None
     collector_url5: AnyHttpUrl | None = None
 
-    _validate_urls = field_validator(
-        "collector_url1",
-        "collector_url2",
-        "collector_url3",
-        "collector_url4",
-        "collector_url5",
-    )(validate_website_url)
     _validate_required = field_validator("collector_url1")(
         conditional_required("national_collector")
     )
@@ -115,7 +122,7 @@ class VisibilitySchema(BaseModel):
         ]
 
 
-class PolicySchema(BaseModel):
+class PolicySchema(AsyncSchema):
     open_access: bool
     open_access_url: AnyHttpUrl | None = None
     metadata_reuse: bool
@@ -133,17 +140,6 @@ class PolicySchema(BaseModel):
     contact: bool
     contact_url: AnyHttpUrl | None = None
     boai: bool
-
-    _validate_urls = field_validator(
-        "open_access_url",
-        "metadata_reuse_url",
-        "content_preservation_url",
-        "deposit_data_url",
-        "action_policy_url",
-        "policy_data_url",
-        "vision_mission_url",
-        "contact_url",
-    )(validate_website_url)
 
     _validate_open_access = field_validator("open_access_url")(
         conditional_required("open_access")
@@ -170,27 +166,26 @@ class PolicySchema(BaseModel):
     _validate_contact = field_validator("contact_url")(required_url("contact"))
 
 
-class LegalAspectsSchema(BaseModel):
+class LegalAspectsSchema(AsyncSchema):
     author_property: bool
     author_permission: bool
     author_permission_url: AnyHttpUrl | None = None
     editorial_policy: bool
     author_copyright: bool
 
-    _validate_url = field_validator("author_permission_url")(validate_website_url)
     _validate_required = field_validator("author_permission_url")(
         conditional_required("author_permission")
     )
 
 
-class MetadataSchema(BaseModel):
+class MetadataSchema(AsyncSchema):
     curation: bool
     classification_system: bool
     metadata_schema: bool
     metadata_export: bool
 
 
-class InteroperabilitySchema(BaseModel):
+class InteroperabilitySchema(AsyncSchema):
     deleted_records: bool
     life_time: bool
     admin_email: bool
@@ -202,7 +197,7 @@ class InteroperabilitySchema(BaseModel):
     share_data: bool
 
 
-class SecuritySchema(BaseModel):
+class SecuritySchema(AsyncSchema):
     backups: bool
     backups_url: AnyHttpUrl | None = None
     checksum: bool
@@ -210,27 +205,23 @@ class SecuritySchema(BaseModel):
     backups_location: bool
     format_control: bool
 
-    _validate_urls = field_validator("backups_url", "checksum_url")(
-        validate_website_url
-    )
     _validate_backups = field_validator("backups_url")(required_url("backups"))
     _validate_checksum = field_validator("checksum_url")(required_url("checksum"))
 
 
-class StatisticsSchema(BaseModel):
+class StatisticsSchema(AsyncSchema):
     general_statistics: bool
     general_statistics_url: AnyHttpUrl | None = None
     save_logs: bool
     counter: bool
     url: str | None = None
 
-    _validate_url = field_validator("general_statistics_url")(validate_website_url)
     _validate_required = field_validator("general_statistics_url")(
         required_url("general_statistics")
     )
 
 
-class ServicesSchema(BaseModel):
+class ServicesSchema(AsyncSchema):
     rss_alert: bool
     author_profiles: bool
     author_profiles_url: AnyHttpUrl | None = None
@@ -240,9 +231,6 @@ class ServicesSchema(BaseModel):
     new_metrics_url: AnyHttpUrl | None = None
     url: str | None = None
 
-    _validate_urls = field_validator(
-        "author_profiles_url", "cite_metrics_url", "new_metrics_url"
-    )(validate_website_url)
     _validate_author_profiles = field_validator("author_profiles_url")(
         required_url("author_profiles")
     )

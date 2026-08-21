@@ -60,6 +60,7 @@ def next_item_for(record: Record) -> str | None:
 async def register(
     registration: RegistrationSchema, db: AsyncSession = Depends(get_db)
 ) -> dict:
+    await registration.validate_async()
     record = await create_record(
         db, str(registration.repository_url), registration.repository_names
     )
@@ -73,6 +74,7 @@ async def visibility(
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
 ) -> dict:
+    await visibility_schema.validate_async()
     existing_result = check_workflow(record, 0)
     if existing_result:
         return existing_result
@@ -87,6 +89,7 @@ async def policy(
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
 ) -> dict:
+    await policy_schema.validate_async()
     existing_result = check_workflow(record, 1)
     if existing_result:
         return existing_result
@@ -101,6 +104,7 @@ async def legal_aspects(
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
 ) -> dict:
+    await legal_aspects_schema.validate_async()
     existing_result = check_workflow(record, 2)
     if existing_result:
         return existing_result
@@ -115,6 +119,7 @@ async def metadata(
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
 ) -> dict:
+    await metadata_schema.validate_async()
     existing_result = check_workflow(record, 3)
     if existing_result:
         return existing_result
@@ -129,6 +134,7 @@ async def interoperability(
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
 ) -> dict:
+    await interoperability_schema.validate_async()
     existing_result = check_workflow(record, 4)
     if existing_result:
         return existing_result
@@ -143,6 +149,7 @@ async def security(
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
 ) -> dict:
+    await security_schema.validate_async()
     existing_result = check_workflow(record, 5)
     if existing_result:
         return existing_result
@@ -157,6 +164,7 @@ async def statistics(
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
 ) -> dict:
+    await statistics_schema.validate_async()
     existing_result = check_workflow(record, 6)
     if existing_result:
         return existing_result
@@ -171,6 +179,7 @@ async def services(
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
 ) -> dict:
+    await services_schema.validate_async()
     existing_result = check_workflow(record, 7)
     if existing_result:
         return existing_result
