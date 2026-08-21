@@ -121,6 +121,11 @@ def validate_required_if_condition(cls, v, info):
 2. **Efficiency**: Prefer built-ins and standard library; optimize for readability
 3. **Consistency**: Follow Python PEP 8; maintain patterns across codebase
 
+## Project Rules
+
+1. **Code changes via the backend agent only**: Application code (`src/`, `tests/`, `alembic/`) must only be modified by the `backend` subagent. All other agents are read-only for code and must delegate any code edits to the backend agent.
+2. **Commit only when requested**: Never run `git commit`, `git commit --amend`, or `git push` unless the user explicitly asks to commit. When committing, follow the repo's conventional-commit style (`type: description`, lowercase, e.g. `feat:`, `fix:`, `refactor:`, `test:`, `perf:`).
+
 ## Database Migrations (Alembic)
 
 ```bash
