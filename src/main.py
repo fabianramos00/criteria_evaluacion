@@ -1,7 +1,16 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.api.routes import router
 from src.config.settings import settings
+from src.core.http import close_clients
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    await close_clients()
 
 
 def create_app() -> FastAPI:
@@ -9,6 +18,7 @@ def create_app() -> FastAPI:
         title="Criteria API",
         description="Criteria API",
         version="0.0.1",
+        lifespan=lifespan,
     )
     app.add_middleware(
         CORSMiddleware,

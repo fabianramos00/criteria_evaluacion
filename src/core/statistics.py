@@ -1,16 +1,17 @@
 import asyncio
 from src.core.tools import get_schema_resume
 from src.api.schemas import StatisticsSchema
+from src.core.http import get_async_client
 import httpx
 
 
 async def statistics_url_exist(url: str) -> str | None:
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url + "/statistics")
-            if response.status_code < 400:
-                return url + "/statistics"
-            return None
+        client = get_async_client()
+        response = await client.get(url + "/statistics")
+        if response.status_code < 400:
+            return url + "/statistics"
+        return None
     except httpx.ConnectError:
         return None
 

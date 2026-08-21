@@ -2,6 +2,7 @@ import asyncio
 import httpx
 from src.api.schemas import MetadataSchema
 from src.core.tools import get_schema_resume
+from src.core.http import get_async_client
 from datetime import datetime
 
 from bs4 import BeautifulSoup
@@ -137,11 +138,11 @@ def search_items(items: list[str], page: BeautifulSoup) -> dict[str, str | None]
 
 
 async def get_metadata(link_dict: dict) -> dict:
-    async with httpx.AsyncClient(verify=False) as client:
-        try:
-            page = await client.get(link_dict["url"])
-        except httpx.RequestError:
-            return link_dict
+    client = get_async_client(verify=False)
+    try:
+        page = await client.get(link_dict["url"])
+    except httpx.RequestError:
+        return link_dict
     page_parse = BeautifulSoup(page.content, "html.parser")
     metadata = {}
     for name in METADATA_FIELDS:

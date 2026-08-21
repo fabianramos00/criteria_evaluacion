@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, AsyncMock
 from src.core.visibility import (
     standard_name,
     friendly_secure_url,
@@ -109,9 +109,8 @@ class TestVisibilityAsync:
 
         mock_client = AsyncMock()
         mock_client.get.return_value = mock_page
-        mock_client.__aenter__.return_value = mock_client
 
-        mocker.patch("httpx.AsyncClient", return_value=mock_client)
+        mocker.patch("src.core.visibility.get_async_client", return_value=mock_client)
 
         result = await is_open_access("https://example.com")
 
@@ -122,11 +121,12 @@ class TestVisibilityAsync:
     async def test_is_open_access_request_error(self, mocker):
         import httpx
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
-                side_effect=httpx.RequestError("error")
-            )
-            result = await is_open_access("https://example.com")
+        mock_client = AsyncMock()
+        mock_client.get.side_effect = httpx.RequestError("error")
+
+        mocker.patch("src.core.visibility.get_async_client", return_value=mock_client)
+
+        result = await is_open_access("https://example.com")
 
         assert result is None
 
@@ -183,11 +183,12 @@ class TestStatisticsAsync:
         mock_response = mocker.Mock()
         mock_response.status_code = 200
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
-                return_value=mock_response
-            )
-            result = await statistics_url_exist("https://example.com")
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+
+        mocker.patch("src.core.statistics.get_async_client", return_value=mock_client)
+
+        result = await statistics_url_exist("https://example.com")
 
         assert result == "https://example.com/statistics"
 
@@ -196,11 +197,12 @@ class TestStatisticsAsync:
         mock_response = mocker.Mock()
         mock_response.status_code = 404
 
-        with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
-                return_value=mock_response
-            )
-            result = await statistics_url_exist("https://example.com")
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+
+        mocker.patch("src.core.statistics.get_async_client", return_value=mock_client)
+
+        result = await statistics_url_exist("https://example.com")
 
         assert result is None
 
@@ -210,9 +212,8 @@ class TestStatisticsAsync:
 
         mock_client = AsyncMock()
         mock_client.get.side_effect = httpx.ConnectError("Connection refused")
-        mock_client.__aenter__.return_value = mock_client
 
-        mocker.patch("src.core.statistics.httpx.AsyncClient", return_value=mock_client)
+        mocker.patch("src.core.statistics.get_async_client", return_value=mock_client)
 
         result = await statistics_url_exist("https://example.com")
 

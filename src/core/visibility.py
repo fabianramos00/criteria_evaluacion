@@ -12,21 +12,22 @@ from xml.etree.ElementTree import fromstring
 from bs4 import BeautifulSoup
 from src.database.models import OAI_PMH, ROAR, Record
 from src.core.tools import is_similar
+from src.core.http import get_async_client
 
 
 async def get_open_doar_data(repository_name: str):
     URL_OPEN_DOAR = f'{settings.OPEN_DOAR_URL}?item-type=repository&api-key={settings.OPEN_DOAR_API_KEY}&format=Json&filter=[["name","contains word","{repository_name}"]]&limit=4'
-    async with httpx.AsyncClient(verify=False) as client:
-        response = await client.get(URL_OPEN_DOAR)
-        data = response.json()
-        return (
-            {
-                "name": data["items"][0]["repository_metadata"]["name"][0]["name"],
-                "host": data["items"][0]["repository_metadata"]["url"],
-            }
-            if 0 < len(data["items"])
-            else None
-        )
+    client = get_async_client(verify=False)
+    response = await client.get(URL_OPEN_DOAR)
+    data = response.json()
+    return (
+        {
+            "name": data["items"][0]["repository_metadata"]["name"][0]["name"],
+            "host": data["items"][0]["repository_metadata"]["url"],
+        }
+        if 0 < len(data["items"])
+        else None
+    )
 
 
 async def get_roar_data(db: AsyncSession, repository_names: list):
@@ -55,102 +56,108 @@ async def get_oai_pmh_data(db: AsyncSession, repository_names: list):
 
 async def get_re3data(repository_name: str):
     URL_R3DATA = f"{settings.R3DATA_URL}?query={repository_name}"
-    async with httpx.AsyncClient() as client:
-        response_re3data = await client.get(URL_R3DATA)
-        tree = fromstring(response_re3data.content)
-        for i in tree:
-            if is_similar(i.find("name").text, repository_name):
-                return {"name": i.find("name").text, "host": None}
+    client = get_async_client()
+    response_re3data = await client.get(URL_R3DATA)
+    tree = fromstring(response_re3data.content)
+    for i in tree:
+        if is_similar(i.find("name").text, repository_name):
+            return {"name": i.find("name").text, "host": None}
     return None
 
 
 async def get_la_referencia_links(repository_name):
     URL_LA_REP = f'{settings.LA_REFERENCIA_URL}?limit=5&filter%5B%5D=reponame_str%3A"{repository_name}"&type=AllFields&sort=year'
-    async with httpx.AsyncClient() as client:
-        try:
-            page_la = await client.get(URL_LA_REP, timeout=10)
-        except (httpx.ConnectTimeout, httpx.ReadTimeout):
-            return []
-        page_parser_la = BeautifulSoup(page_la.content, "html.parser")
-        link_list, la_links = [], []
-        for i in page_parser_la.find_all("div", {"class": "result"}):
-            la_links.append(i.find_all("a")[0]["href"])
-        for i in la_links:
-            page_la = await client.get("https://www.lareferencia.info" + i)
+    client = get_async_client()
+    try:
+        page_la = await client.get(URL_LA_REP, timeout=10)
+    except (httpx.ConnectTimeout, httpx.ReadTimeout):
+        return []
+    page_parser_la = BeautifulSoup(page_la.content, "html.parser")
+    la_links = [
+        i.find_all("a")[0]["href"]
+        for i in page_parser_la.find_all("div", {"class": "result"})
+    ]
+
+    semaphore = asyncio.Semaphore(5)
+
+    async def fetch_link(path: str) -> str:
+        async with semaphore:
+            page_la = await client.get("https://www.lareferencia.info" + path)
             page_parser_la_r = BeautifulSoup(page_la.content, "html.parser")
-            link_list.append(page_parser_la_r.find_all("tr")[-4].find("a")["href"])
-        return link_list
+            return page_parser_la_r.find_all("tr")[-4].find("a")["href"]
+
+    return await asyncio.gather(*(fetch_link(i) for i in la_links))
 
 
 async def get_la_referencia(repository_name: str):
     URL_LA = f"{settings.LA_REFERENCIA_URL}?lookfor={repository_name}&type=AllFields&limit=10"
-    async with httpx.AsyncClient() as client:
-        try:
-            page_la = await client.get(URL_LA, timeout=10)
-        except (httpx.ConnectTimeout, httpx.ReadTimeout):
-            return None
-        page_parser_la = BeautifulSoup(page_la.content, "html.parser")
-        for i in page_parser_la.find_all("div", {"class": "result"}):
-            repository_la = i.find_all("a")[3].text
-            if is_similar(repository_la, repository_name):
-                return {
-                    "name": repository_la,
-                    "host": None,
-                    "links": await get_la_referencia_links(repository_la),
-                }
+    client = get_async_client()
+    try:
+        page_la = await client.get(URL_LA, timeout=10)
+    except (httpx.ConnectTimeout, httpx.ReadTimeout):
+        return None
+    page_parser_la = BeautifulSoup(page_la.content, "html.parser")
+    for i in page_parser_la.find_all("div", {"class": "result"}):
+        repository_la = i.find_all("a")[3].text
+        if is_similar(repository_la, repository_name):
+            return {
+                "name": repository_la,
+                "host": None,
+                "links": await get_la_referencia_links(repository_la),
+            }
     return None
 
 
 async def get_open_aire_links(data_source_id: str, repository_url: str) -> list:
     links_oa = []
-    async with httpx.AsyncClient() as client:
-        params: dict = {
-            "relHostingDataSourceId": data_source_id,
-            "page": 1,
-            "pageSize": 10,
-            "fromPublicationDate": (
-                date.today() - relativedelta(years=settings.MIN_YEAR_DIFFERENCE)
-            ).strftime("%Y"),
-        }
-        response_oa = await client.get(
-            f"{settings.OPEN_AIRE_URL}/researchProducts", params=params
-        )
-        if response_oa.status_code != 200:
-            return []
-        data_oa = response_oa.json()
-        links_oa = [
-            url
-            for i in data_oa.get("results", [])
-            for instance in i.get("instances", [])
-            for url in instance.get("urls", [])
-            if repository_url in url
-        ]
+    client = get_async_client()
+    params: dict = {
+        "relHostingDataSourceId": data_source_id,
+        "page": 1,
+        "pageSize": 10,
+        "fromPublicationDate": (
+            date.today() - relativedelta(years=settings.MIN_YEAR_DIFFERENCE)
+        ).strftime("%Y"),
+    }
+    response_oa = await client.get(
+        f"{settings.OPEN_AIRE_URL}/researchProducts", params=params
+    )
+    if response_oa.status_code != 200:
+        return []
+    data_oa = response_oa.json()
+    links_oa = [
+        url
+        for i in data_oa.get("results", [])
+        for instance in i.get("instances", [])
+        for url in instance.get("urls", [])
+        if repository_url in url
+    ]
     return links_oa
 
 
 async def get_open_aire_data(repository_name: str) -> dict | None:
-    async with httpx.AsyncClient() as client:
-        params: dict = {
-            "search": repository_name,
-            "page": 1,
-            "pageSize": 10,
-            "dataSourceTypeName": "Institutional Repository",
-        }
-        response_oa = await client.get(
-            f"{settings.OPEN_AIRE_URL}/dataSources", params=params
-        )
-        if response_oa.status_code != 200:
-            return None
-        data_oa = response_oa.json()
-        for datasource in data_oa["results"]:
-            if is_similar(datasource["officialName"], repository_name):
-                return {
-                    "name": datasource["officialName"],
-                    "host": datasource.get("websiteUrl"),
-                    "links": await get_open_aire_links(
-                        datasource["id"], datasource.get("websiteUrl")
-                    ),
-                }
+    client = get_async_client()
+    params: dict = {
+        "search": repository_name,
+        "page": 1,
+        "pageSize": 10,
+        "dataSourceTypeName": "Institutional Repository",
+    }
+    response_oa = await client.get(
+        f"{settings.OPEN_AIRE_URL}/dataSources", params=params
+    )
+    if response_oa.status_code != 200:
+        return None
+    data_oa = response_oa.json()
+    for datasource in data_oa["results"]:
+        if is_similar(datasource["officialName"], repository_name):
+            return {
+                "name": datasource["officialName"],
+                "host": datasource.get("websiteUrl"),
+                "links": await get_open_aire_links(
+                    datasource["id"], datasource.get("websiteUrl")
+                ),
+            }
     return None
 
 
@@ -165,11 +172,9 @@ async def get_open_alex_data(repository_url: str) -> dict | None:
         "search": repository_url,
     }
     try:
-        async with httpx.AsyncClient() as client:
-            api_result = await client.get(
-                f"{settings.OPENALEX_URL}/works", params=params
-            )
-            data = api_result.json()
+        client = get_async_client()
+        api_result = await client.get(f"{settings.OPENALEX_URL}/works", params=params)
+        data = api_result.json()
     except Exception:
         return None
     results = []
@@ -217,23 +222,23 @@ async def get_open_alex_data(repository_url: str) -> dict | None:
 
 
 async def get_core_data(repository_name: str) -> dict | None:
-    async with httpx.AsyncClient() as client:
-        core_response = await client.get(
-            f"{settings.CORE_URL}/search/data-providers/",
-            params={"q": f"name:{repository_name}"},
-            headers={"Authorization": f"Bearer {settings.CORE_API_KEY}"},
-        )
-        if core_response.status_code != 200:
-            return None
-        core_result = core_response.json()
-        for data_provider in core_result["results"]:
-            if data_provider.get("type") != "REPOSITORY":
-                continue
-            if is_similar(data_provider.get("name"), repository_name):
-                return {
-                    "name": data_provider.get("name"),
-                    "host": data_provider.get("homepageUrl"),
-                }
+    client = get_async_client()
+    core_response = await client.get(
+        f"{settings.CORE_URL}/search/data-providers/",
+        params={"q": f"name:{repository_name}"},
+        headers={"Authorization": f"Bearer {settings.CORE_API_KEY}"},
+    )
+    if core_response.status_code != 200:
+        return None
+    core_result = core_response.json()
+    for data_provider in core_result["results"]:
+        if data_provider.get("type") != "REPOSITORY":
+            continue
+        if is_similar(data_provider.get("name"), repository_name):
+            return {
+                "name": data_provider.get("name"),
+                "host": data_provider.get("homepageUrl"),
+            }
     return None
 
 
@@ -291,8 +296,8 @@ async def search_in(function: Callable, repository_names: list):
 
 async def is_open_access(url: str) -> dict | None:
     try:
-        async with httpx.AsyncClient() as client:
-            page = await client.get(url)
+        client = get_async_client()
+        page = await client.get(url)
     except httpx.RequestError:
         return None
     soup = BeautifulSoup(page.content, "html.parser")
@@ -304,6 +309,11 @@ async def is_open_access(url: str) -> dict | None:
     return {"url": url, "open_access": is_open, "author_rights": author_rights}
 
 
+async def limited_is_open_access(url: str) -> dict | None:
+    async with asyncio.Semaphore(5):
+        return await is_open_access(url)
+
+
 async def open_access(visibility_dict: dict) -> tuple[dict, list]:
     dict_list, value = [], 1
     link_list = [
@@ -312,7 +322,7 @@ async def open_access(visibility_dict: dict) -> tuple[dict, list]:
         if v and "links" in v
         for link in v["links"]
     ]
-    tasks = [is_open_access(link) for link in link_list]
+    tasks = [limited_is_open_access(link) for link in link_list]
     result = await asyncio.gather(*tasks)
     for i in result:
         if not i["open_access"]:
