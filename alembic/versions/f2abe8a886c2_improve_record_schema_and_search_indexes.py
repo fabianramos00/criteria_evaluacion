@@ -45,15 +45,21 @@ def upgrade() -> None:
     )
     op.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
     op.execute(
+        "CREATE OR REPLACE FUNCTION repository_names_text(text[]) "
+        "RETURNS text LANGUAGE sql IMMUTABLE "
+        "AS 'SELECT array_to_string($1, '' '')'"
+    )
+    op.execute(
         "CREATE INDEX IF NOT EXISTS ix_record_repository_names_trgm "
         'ON "Record" USING gin '
-        "(array_to_string(repository_names, ' ') gin_trgm_ops)"
+        "(repository_names_text(repository_names::text[]) gin_trgm_ops)"
     )
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     op.execute("DROP INDEX IF EXISTS ix_record_repository_names_trgm")
+    op.execute("DROP FUNCTION IF EXISTS repository_names_text(text[])")
     op.drop_index("ix_record_repository_names_gin", table_name="Record")
     op.alter_column(
         "Record",

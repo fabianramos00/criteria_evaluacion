@@ -31,7 +31,7 @@ class Record(Base):
         Index(
             "ix_record_repository_names_gin", "repository_names", postgresql_using="gin"
         ),
-        # Trigram index ix_record_repository_names_trgm (array_to_string +
+        # Trigram index ix_record_repository_names_trgm (repository_names_text +
         # gin_trgm_ops) is managed in the Alembic migration.
     )
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)

@@ -2,7 +2,7 @@ import logging
 from decimal import Decimal
 
 from fastapi import HTTPException
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, cast, ARRAY, Text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.models import Record
@@ -29,7 +29,9 @@ async def get_records(
     if search:
         search_filter = or_(
             Record.repository_url.ilike(f"%{search}%"),
-            func.array_to_string(Record.repository_names, " ").ilike(f"%{search}%"),
+            func.repository_names_text(
+                cast(Record.repository_names, ARRAY(Text))
+            ).ilike(f"%{search}%"),
         )
     query = select(Record).order_by(Record.updated_at.desc())
     if search_filter is not None:
