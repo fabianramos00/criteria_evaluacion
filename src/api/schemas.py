@@ -1,7 +1,7 @@
 from uuid import UUID
 from typing import Optional
 from datetime import datetime
-from pydantic import BaseModel, AnyHttpUrl, field_validator, Field
+from pydantic import BaseModel, ConfigDict, AnyHttpUrl, field_validator, Field
 from pydantic_core import PydanticCustomError
 from src.core.tools import check_website
 
@@ -257,6 +257,8 @@ class ServicesSchema(BaseModel):
 
 
 class RecordOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     repository_url: str
     repository_names: list[str]
@@ -265,6 +267,3 @@ class RecordOut(BaseModel):
     rating: float
     last_item_evaluated: str
     is_completed: bool
-
-    class Config:
-        from_attributes = True
