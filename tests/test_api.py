@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 from src.main import create_app
@@ -101,3 +103,52 @@ class TestServicesSchemaValidation:
                 cite_metrics=False,
                 new_metrics=False,
             )
+
+
+class TestFreshRecordDetailSummary:
+    def _fresh_record(self):
+        from types import SimpleNamespace
+
+        return SimpleNamespace(
+            last_item_evaluated="started",
+            is_completed=False,
+            data={},
+            rating=0.0,
+        )
+
+    def test_last_criterion_index_started_returns_minus_one(self):
+        from src.api.routes import last_criterion_index
+
+        assert last_criterion_index(self._fresh_record()) == -1
+
+    def test_next_item_for_started_returns_visibility(self):
+        from src.api.routes import next_item_for
+
+        assert next_item_for(self._fresh_record()) == "visibility"
+
+    @pytest.mark.asyncio
+    async def test_get_data_does_not_raise_for_started(self):
+        from src.api.routes import get_data
+
+        response = await get_data(
+            item="visibility",
+            token="test-token",
+            db=None,
+            record=self._fresh_record(),
+        )
+        assert response.status_code == 404
+        body = json.loads(response.body)
+        assert body["next_item"] == "visibility"
+        assert body["is_next"] is True
+
+    @pytest.mark.asyncio
+    async def test_get_summary_does_not_raise_for_started(self):
+        from src.api.routes import get_summary
+
+        response = await get_summary(
+            token="test-token",
+            record=self._fresh_record(),
+        )
+        assert response.status_code == 400
+        body = json.loads(response.body)
+        assert body["next_item"] == "visibility"

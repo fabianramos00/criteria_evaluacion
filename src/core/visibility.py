@@ -269,7 +269,7 @@ def standard_name(data: dict) -> dict:
     names = [v["name"] for v in data.values() if v and v.get("name") is not None]
     if not names:
         return {"value": 1.5, "details": names}
-    value = 0 if len(set(names)) == 1 else 0
+    value = 1.5 if len(set(names)) == 1 else 0
     return {"value": value, "details": names}
 
 
@@ -350,6 +350,9 @@ async def open_access(visibility_dict: dict) -> tuple[dict, list]:
     tasks = [limited_is_open_access(link) for link in link_list]
     result = await asyncio.gather(*tasks)
     for i in result:
+        if i is None:
+            value = 0
+            continue
         if not i["open_access"]:
             link_list.remove(i["url"])
             value = 0

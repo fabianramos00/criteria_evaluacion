@@ -31,7 +31,7 @@ class TestVisibilityHelpers:
     def test_standard_name_all_same_names(self):
         data = {"a": {"name": "Repo"}, "b": {"name": "Repo"}}
         result = standard_name(data)
-        assert result["value"] == 0
+        assert result["value"] == 1.5
 
     def test_standard_name_different_names(self):
         data = {"a": {"name": "Repo A"}, "b": {"name": "Repo B"}}
@@ -161,6 +161,29 @@ class TestVisibilityAsync:
 
         result, dict_list = await open_access(visibility_dict)
         assert result["value"] == 1
+
+    @pytest.mark.asyncio
+    async def test_open_access_with_none_result(self, mocker):
+        visibility_dict = {
+            "repo1": {"links": ["https://example.com/1", "https://example.com/2"]},
+        }
+
+        mocker.patch(
+            "src.core.visibility.is_open_access",
+            new_callable=AsyncMock,
+            side_effect=[
+                {
+                    "url": "https://example.com/1",
+                    "open_access": True,
+                    "author_rights": True,
+                },
+                None,
+            ],
+        )
+
+        result, dict_list = await open_access(visibility_dict)
+        assert result["value"] == 0
+        assert None not in dict_list
 
     @pytest.mark.asyncio
     async def test_execute_async_search(self):

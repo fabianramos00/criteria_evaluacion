@@ -44,8 +44,15 @@ async def get_record_or_404(token: str, db: AsyncSession = Depends(get_db)) -> R
     return record
 
 
+def last_criterion_index(record: Record) -> int:
+    try:
+        return CRITERIA_LIST.index(record.last_item_evaluated)
+    except ValueError:
+        return -1
+
+
 def next_item_for(record: Record) -> str | None:
-    last_idx = CRITERIA_LIST.index(record.last_item_evaluated)
+    last_idx = last_criterion_index(record)
     return CRITERIA_LIST[last_idx + 1] if last_idx < len(CRITERIA_LIST) - 1 else None
 
 
@@ -183,7 +190,7 @@ async def get_data(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid item")
     is_next, is_completed = False, record.is_completed
-    last_idx = CRITERIA_LIST.index(record.last_item_evaluated)
+    last_idx = last_criterion_index(record)
     if record.last_item_evaluated == "started" and item_index == 0:
         is_next = True
     elif item_index == last_idx + 1:
