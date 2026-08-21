@@ -1,7 +1,6 @@
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy import func, Index
-from sqlalchemy import Column, String, Integer, Boolean, ARRAY, Float, DateTime
-from sqlalchemy.dialects.postgresql import JSON, UUID
+from sqlalchemy import func, Index, Numeric
+from sqlalchemy import Column, String, Integer, Boolean, ARRAY, DateTime
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from uuid import uuid4
 from src.database.session import Base
 
@@ -29,14 +28,19 @@ class Record(Base):
         Index("ix_record_last_item_evaluated", "last_item_evaluated"),
         Index("ix_record_is_completed", "is_completed"),
         Index("ix_record_updated_at", "updated_at"),
+        Index(
+            "ix_record_repository_names_gin", "repository_names", postgresql_using="gin"
+        ),
+        # Trigram index ix_record_repository_names_trgm (array_to_string +
+        # gin_trgm_ops) is managed in the Alembic migration.
     )
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    data = Column(JSON, default={})
+    data = Column(JSONB, default=dict)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
-    rating = Column(Float, default=0)
+    rating = Column(Numeric(precision=5, scale=2), default=0)
     repository_url = Column(String(500), nullable=False)
     repository_names = Column(ARRAY(String(500)), nullable=False)
     links = Column(JSONB, nullable=True)

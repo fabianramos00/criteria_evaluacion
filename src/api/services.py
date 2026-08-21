@@ -1,9 +1,9 @@
 import logging
+from decimal import Decimal
 
 from fastapi import HTTPException
-from sqlalchemy import select, func, or_, cast, String
+from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm.attributes import flag_modified
 
 from src.database.models import Record
 from src.api.schemas import RecordOut
@@ -29,7 +29,7 @@ async def get_records(
     if search:
         search_filter = or_(
             Record.repository_url.ilike(f"%{search}%"),
-            cast(Record.repository_names, String).ilike(f"%{search}%"),
+            func.array_to_string(Record.repository_names, " ").ilike(f"%{search}%"),
         )
     query = select(Record).order_by(Record.updated_at.desc())
     if search_filter is not None:
@@ -61,9 +61,7 @@ def check_workflow(record: Record, item_index: int) -> dict | None:
     data = record.data
     item = CRITERIA_LIST[item_index]
     if item in data:
-        item_data = data[item]
-        item_data["accumulative"] = record.rating
-        return item_data
+        return {**data[item], "accumulative": record.rating}
 
     if item_index != 0:
         try:
@@ -105,14 +103,17 @@ async def update_record(
 ) -> Record:
     item = CRITERIA_LIST[item_index]
     record.data = {**record.data, item: result}
-    record.rating += result["total"]
+    record.rating = (record.rating or 0) + Decimal(str(result["total"]))
     if links is not None:
         record.links = links
-        flag_modified(record, "links")
     record.last_item_evaluated = item
     record.is_completed = item_index == len(CRITERIA_LIST) - 1
     db.add(record)
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
     await db.refresh(record)
     return record
 
