@@ -1,5 +1,5 @@
 from src.api.schemas import ServicesSchema
-from src.core.tools import get_schema_resume
+from src.core.tools import get_schema_resume, sum_resume
 from src.constants import BIBLIOGRAPHIC_MANAGERS, METADATA_EXPORT_TYPES, SOCIAL_NETWORKS
 
 
@@ -37,7 +37,5 @@ def evaluate_services(services_schema: ServicesSchema, link_list: list[dict]) ->
     )
     for key, value in evaluated_items.items():
         services_resume[key] = value
-    services_resume["total"] = sum(
-        v["value"] if isinstance(v, dict) else v for v in services_resume.values()
-    )
+    services_resume["total"] = sum_resume(services_resume)
     return services_resume

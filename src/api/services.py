@@ -1,44 +1,45 @@
+import logging
+
 from fastapi import HTTPException
 from sqlalchemy import select, func, or_, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm.attributes import flag_modified
+
 from src.database.models import Record
 from src.api.schemas import RecordOut
 from src.constants import CRITERIA_LIST
 
+logger = logging.getLogger(__name__)
 
-async def get_record_by_id(db: AsyncSession, id: str):
+
+async def get_record_by_id(db: AsyncSession, record_id: str) -> Record | None:
     try:
-        result = await db.execute(select(Record).filter_by(id=id))
+        result = await db.execute(select(Record).filter_by(id=record_id))
         return result.scalars().first()
-    except Exception as e:
-        print(f"Error getting record: {e}")
-        return None
+    except Exception:
+        logger.exception("Error getting record %s", record_id)
+        raise
 
 
 async def get_records(
     db: AsyncSession, page: int, limit: int, search: str | None = None
 ) -> dict:
     offset = (page - 1) * limit
-    query = select(Record).order_by(Record.updated_at.desc())
+    search_filter = None
     if search:
-        query = query.where(
-            or_(
-                Record.repository_url.ilike(f"%{search}%"),
-                cast(Record.repository_names, String).ilike(f"%{search}%"),
-            )
+        search_filter = or_(
+            Record.repository_url.ilike(f"%{search}%"),
+            cast(Record.repository_names, String).ilike(f"%{search}%"),
         )
+    query = select(Record).order_by(Record.updated_at.desc())
+    if search_filter is not None:
+        query = query.where(search_filter)
 
     result = await db.execute(query.offset(offset).limit(limit))
     records = result.scalars().all()
     count_query = select(func.count(Record.id))
-    if search:
-        count_query = count_query.where(
-            or_(
-                Record.repository_url.ilike(f"%{search}%"),
-                cast(Record.repository_names, String).ilike(f"%{search}%"),
-            )
-        )
+    if search_filter is not None:
+        count_query = count_query.where(search_filter)
 
     total_result = await db.execute(count_query)
     total_records = total_result.scalar_one()
@@ -56,7 +57,7 @@ async def get_records(
     }
 
 
-def check_workflow(record: Record, item_index: int):
+def check_workflow(record: Record, item_index: int) -> dict | None:
     data = record.data
     item = CRITERIA_LIST[item_index]
     if item in data:
@@ -90,9 +91,9 @@ async def create_record(
         db.add(record)
         await db.commit()
         return record
-    except Exception as e:
+    except Exception:
         await db.rollback()
-        raise e
+        raise
 
 
 async def update_record(

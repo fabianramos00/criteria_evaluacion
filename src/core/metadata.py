@@ -1,13 +1,11 @@
 import asyncio
-import httpx
-from src.api.schemas import MetadataSchema
-from src.core.tools import get_schema_resume
-from src.core.http import get_async_client
 from datetime import datetime
-
-from bs4 import BeautifulSoup
 from re import compile
 
+from bs4 import BeautifulSoup
+import httpx
+
+from src.api.schemas import MetadataSchema
 from src.constants import (
     METADATA_DATE_REGEX,
     DATE_FORMATS,
@@ -24,6 +22,8 @@ from src.constants import (
     SOCIAL_NETWORKS,
     FIELDS_ITEM,
 )
+from src.core.http import get_async_client
+from src.core.tools import get_schema_resume, sum_resume
 
 
 def check_metadata_date(
@@ -244,7 +244,5 @@ async def evaluate_metadata(
         ],
     )
     metadata_resume.update(result_fields)
-    metadata_resume["total"] = sum(
-        v["value"] if isinstance(v, dict) else v for v in metadata_resume.values()
-    )
+    metadata_resume["total"] = sum_resume(metadata_resume)
     return metadata_resume, new_link_list

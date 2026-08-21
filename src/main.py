@@ -16,8 +16,8 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Criteria API",
-        description="Criteria API",
-        version="0.0.1",
+        description="API for evaluating repository compliance across eight criteria areas",
+        version="0.1.0",
         lifespan=lifespan,
     )
     app.add_middleware(

@@ -1,24 +1,32 @@
-from sqlalchemy import select, or_
-import httpx
-from src.api.schemas import VisibilitySchema
-from typing import Callable
-from sqlalchemy.ext.asyncio import AsyncSession
-from src.config.settings import settings
-import re
 import asyncio
+import re
+from collections.abc import Callable
 from datetime import date
-from dateutil.relativedelta import relativedelta
 from xml.etree.ElementTree import fromstring
+
 from bs4 import BeautifulSoup
-from src.database.models import OAI_PMH, ROAR, Record
-from src.core.tools import is_similar
+from dateutil.relativedelta import relativedelta
+import httpx
+from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.api.schemas import VisibilitySchema
+from src.config.settings import settings
 from src.core.http import get_async_client
+from src.core.tools import is_similar, sum_resume
+from src.database.models import OAI_PMH, ROAR, Record
 
 
-async def get_open_doar_data(repository_name: str):
-    URL_OPEN_DOAR = f'{settings.OPEN_DOAR_URL}?item-type=repository&api-key={settings.OPEN_DOAR_API_KEY}&format=Json&filter=[["name","contains word","{repository_name}"]]&limit=4'
+async def get_open_doar_data(repository_name: str) -> dict | None:
+    params = {
+        "item-type": "repository",
+        "api-key": settings.OPEN_DOAR_API_KEY,
+        "format": "Json",
+        "filter": f'[["name","contains word","{repository_name}"]]',
+        "limit": 4,
+    }
     client = get_async_client(verify=False)
-    response = await client.get(URL_OPEN_DOAR)
+    response = await client.get(settings.OPEN_DOAR_URL, params=params)
     data = response.json()
     return (
         {
@@ -30,7 +38,7 @@ async def get_open_doar_data(repository_name: str):
     )
 
 
-async def get_roar_data(db: AsyncSession, repository_names: list):
+async def get_roar_data(db: AsyncSession, repository_names: list[str]) -> dict | None:
     conditions = [ROAR.repository_name.ilike(f"%{name}%") for name in repository_names]
     result_roar = await db.execute(select(ROAR).filter(or_(*conditions)))
     result_roar = result_roar.scalars().first()
@@ -41,7 +49,9 @@ async def get_roar_data(db: AsyncSession, repository_names: list):
     )
 
 
-async def get_oai_pmh_data(db: AsyncSession, repository_names: list):
+async def get_oai_pmh_data(
+    db: AsyncSession, repository_names: list[str]
+) -> dict | None:
     conditions = [
         OAI_PMH.repository_name.ilike(f"%{name}%") for name in repository_names
     ]
@@ -54,7 +64,7 @@ async def get_oai_pmh_data(db: AsyncSession, repository_names: list):
     )
 
 
-async def get_re3data(repository_name: str):
+async def get_re3data(repository_name: str) -> dict | None:
     URL_R3DATA = f"{settings.R3DATA_URL}?query={repository_name}"
     client = get_async_client()
     response_re3data = await client.get(URL_R3DATA)
@@ -65,11 +75,18 @@ async def get_re3data(repository_name: str):
     return None
 
 
-async def get_la_referencia_links(repository_name):
-    URL_LA_REP = f'{settings.LA_REFERENCIA_URL}?limit=5&filter%5B%5D=reponame_str%3A"{repository_name}"&type=AllFields&sort=year'
+async def get_la_referencia_links(repository_name: str) -> list[str]:
+    params = {
+        "limit": 5,
+        "filter[]": f'reponame_str:"{repository_name}"',
+        "type": "AllFields",
+        "sort": "year",
+    }
     client = get_async_client()
     try:
-        page_la = await client.get(URL_LA_REP, timeout=10)
+        page_la = await client.get(
+            settings.LA_REFERENCIA_URL, params=params, timeout=10
+        )
     except (httpx.ConnectTimeout, httpx.ReadTimeout):
         return []
     page_parser_la = BeautifulSoup(page_la.content, "html.parser")
@@ -89,11 +106,17 @@ async def get_la_referencia_links(repository_name):
     return await asyncio.gather(*(fetch_link(i) for i in la_links))
 
 
-async def get_la_referencia(repository_name: str):
-    URL_LA = f"{settings.LA_REFERENCIA_URL}?lookfor={repository_name}&type=AllFields&limit=10"
+async def get_la_referencia(repository_name: str) -> dict | None:
+    params = {
+        "lookfor": repository_name,
+        "type": "AllFields",
+        "limit": 10,
+    }
     client = get_async_client()
     try:
-        page_la = await client.get(URL_LA, timeout=10)
+        page_la = await client.get(
+            settings.LA_REFERENCIA_URL, params=params, timeout=10
+        )
     except (httpx.ConnectTimeout, httpx.ReadTimeout):
         return None
     page_parser_la = BeautifulSoup(page_la.content, "html.parser")
@@ -175,7 +198,7 @@ async def get_open_alex_data(repository_url: str) -> dict | None:
         client = get_async_client()
         api_result = await client.get(f"{settings.OPENALEX_URL}/works", params=params)
         data = api_result.json()
-    except Exception:
+    except httpx.HTTPError:
         return None
     results = []
     for work in data.get("results", []):
@@ -270,7 +293,7 @@ def count_items(data: dict, item_name: str) -> dict:
     return {"value": 1, "text": f"Presence in 1 or more {item_name}"}
 
 
-def count_national_collectors(collector_data: list[str] | None):
+def count_national_collectors(collector_data: list[str] | None) -> dict:
     if collector_data is None:
         return {"value": 0, "text": "Not present in national collectors", "details": []}
     if 5 == len(collector_data):
@@ -286,7 +309,9 @@ def count_national_collectors(collector_data: list[str] | None):
     }
 
 
-async def search_in(function: Callable, repository_names: list):
+async def search_in(
+    function: Callable[..., dict | None], repository_names: list[str]
+) -> dict | None:
     for i in repository_names:
         result = await function(i)
         if result is not None:
@@ -332,7 +357,9 @@ async def open_access(visibility_dict: dict) -> tuple[dict, list]:
     return {"value": value, "details": link_list}, dict_list
 
 
-async def execute_async_search(func_dict: dict, repository_name_list: list):
+async def execute_async_search(
+    func_dict: dict[str, Callable], repository_name_list: list[str]
+) -> dict:
     tasks = (search_in(func_dict[key], repository_name_list) for key in func_dict)
     results = await asyncio.gather(*tasks)
     return dict(zip(func_dict.keys(), results))
@@ -389,7 +416,5 @@ async def evaluate_visibility(
         )
     )
     resume_visibility["open_access"], links_dict = await open_access(data_links)
-    resume_visibility["total"] = sum(
-        v["value"] if isinstance(v, dict) else v for v in resume_visibility.values()
-    )
+    resume_visibility["total"] = sum_resume(resume_visibility)
     return resume_visibility, links_dict

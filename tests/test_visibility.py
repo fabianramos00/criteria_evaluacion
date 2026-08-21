@@ -11,7 +11,7 @@ from src.core.visibility import (
     execute_async_search,
 )
 from src.core.statistics import (
-    statistics_url_exist,
+    statistics_url_exists,
     evaluate_urls_statistics,
 )
 from src.core.interoperability import (
@@ -188,7 +188,7 @@ class TestStatisticsAsync:
 
         mocker.patch("src.core.statistics.get_async_client", return_value=mock_client)
 
-        result = await statistics_url_exist("https://example.com")
+        result = await statistics_url_exists("https://example.com")
 
         assert result == "https://example.com/statistics"
 
@@ -202,7 +202,7 @@ class TestStatisticsAsync:
 
         mocker.patch("src.core.statistics.get_async_client", return_value=mock_client)
 
-        result = await statistics_url_exist("https://example.com")
+        result = await statistics_url_exists("https://example.com")
 
         assert result is None
 
@@ -215,7 +215,7 @@ class TestStatisticsAsync:
 
         mocker.patch("src.core.statistics.get_async_client", return_value=mock_client)
 
-        result = await statistics_url_exist("https://example.com")
+        result = await statistics_url_exists("https://example.com")
 
         assert result is None
 

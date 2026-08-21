@@ -1,6 +1,6 @@
 from src.database.models import Record
 from src.constants import DOCUMENT_IDENTIFIER_LIST
-from src.core.tools import get_schema_resume
+from src.core.tools import get_schema_resume, sum_resume
 from src.api.schemas import InteroperabilitySchema
 
 
@@ -50,8 +50,5 @@ def evaluate_interoperability(
     )
     interoperability_resume["headers_html"] = data["metadata"]["dublin_core"]
     interoperability_resume["standard_identifier"] = check_identifier(record.links)
-    interoperability_resume["total"] = sum(
-        v["value"] if isinstance(v, dict) else v
-        for v in interoperability_resume.values()
-    )
+    interoperability_resume["total"] = sum_resume(interoperability_resume)
     return interoperability_resume

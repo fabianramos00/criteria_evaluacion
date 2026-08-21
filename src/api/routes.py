@@ -44,8 +44,15 @@ async def get_record_or_404(token: str, db: AsyncSession = Depends(get_db)) -> R
     return record
 
 
+def next_item_for(record: Record) -> str | None:
+    last_idx = CRITERIA_LIST.index(record.last_item_evaluated)
+    return CRITERIA_LIST[last_idx + 1] if last_idx < len(CRITERIA_LIST) - 1 else None
+
+
 @router.post("/")
-async def home(registration: RegistrationSchema, db: AsyncSession = Depends(get_db)):
+async def register(
+    registration: RegistrationSchema, db: AsyncSession = Depends(get_db)
+) -> dict:
     record = await create_record(
         db, str(registration.repository_url), registration.repository_names
     )
@@ -58,7 +65,7 @@ async def visibility(
     visibility_schema: VisibilitySchema,
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
-):
+) -> dict:
     existing_result = check_workflow(record, 0)
     if existing_result:
         return existing_result
@@ -72,7 +79,7 @@ async def policy(
     policy_schema: PolicySchema,
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
-):
+) -> dict:
     existing_result = check_workflow(record, 1)
     if existing_result:
         return existing_result
@@ -86,7 +93,7 @@ async def legal_aspects(
     legal_aspects_schema: LegalAspectsSchema,
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
-):
+) -> dict:
     existing_result = check_workflow(record, 2)
     if existing_result:
         return existing_result
@@ -100,7 +107,7 @@ async def metadata(
     metadata_schema: MetadataSchema,
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
-):
+) -> dict:
     existing_result = check_workflow(record, 3)
     if existing_result:
         return existing_result
@@ -114,7 +121,7 @@ async def interoperability(
     interoperability_schema: InteroperabilitySchema,
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
-):
+) -> dict:
     existing_result = check_workflow(record, 4)
     if existing_result:
         return existing_result
@@ -128,7 +135,7 @@ async def security(
     security_schema: SecuritySchema,
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
-):
+) -> dict:
     existing_result = check_workflow(record, 5)
     if existing_result:
         return existing_result
@@ -142,7 +149,7 @@ async def statistics(
     statistics_schema: StatisticsSchema,
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
-):
+) -> dict:
     existing_result = check_workflow(record, 6)
     if existing_result:
         return existing_result
@@ -156,7 +163,7 @@ async def services(
     services_schema: ServicesSchema,
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
-):
+) -> dict:
     existing_result = check_workflow(record, 7)
     if existing_result:
         return existing_result
@@ -164,13 +171,13 @@ async def services(
     return await update_record_and_format_response(db, record, 7, result)
 
 
-@router.get("/detail/{item}/{token}")
+@router.get("/detail/{item}/{token}", response_model=None)
 async def get_data(
     item: str,
     token: str,
     db: AsyncSession = Depends(get_db),
     record: Record = Depends(get_record_or_404),
-):
+) -> JSONResponse | dict:
     try:
         item_index = CRITERIA_LIST.index(item)
     except ValueError:
@@ -188,9 +195,7 @@ async def get_data(
                 "is_next": is_next,
                 "is_completed": is_completed,
                 "last_item_evaluated": record.last_item_evaluated,
-                "next_item": CRITERIA_LIST[last_idx + 1]
-                if last_idx < len(CRITERIA_LIST) - 1
-                else None,
+                "next_item": next_item_for(record),
             },
         )
     item_data = record.data[item]
@@ -207,22 +212,21 @@ async def get_list(
     limit: int = 10,
     search: str | None = None,
     db: AsyncSession = Depends(get_db),
-):
+) -> dict:
     return await get_records(db, page, limit, search)
 
 
-@router.get("/summary/{token}")
-async def get_summary(token: str, record: Record = Depends(get_record_or_404)):
+@router.get("/summary/{token}", response_model=None)
+async def get_summary(
+    token: str, record: Record = Depends(get_record_or_404)
+) -> JSONResponse | dict:
     if not record.is_completed:
-        last_idx = CRITERIA_LIST.index(record.last_item_evaluated)
         return JSONResponse(
             status_code=400,
             content={
                 "is_completed": False,
                 "last_item_evaluated": record.last_item_evaluated,
-                "next_item": CRITERIA_LIST[last_idx + 1]
-                if last_idx < len(CRITERIA_LIST) - 1
-                else None,
+                "next_item": next_item_for(record),
             },
         )
     record_dict = RecordOut.model_validate(record).model_dump()

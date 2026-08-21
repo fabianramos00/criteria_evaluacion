@@ -1,11 +1,13 @@
 import asyncio
-from src.core.tools import get_schema_resume
-from src.api.schemas import StatisticsSchema
-from src.core.http import get_async_client
+
 import httpx
 
+from src.api.schemas import StatisticsSchema
+from src.core.http import get_async_client
+from src.core.tools import get_schema_resume, sum_resume
 
-async def statistics_url_exist(url: str) -> str | None:
+
+async def statistics_url_exists(url: str) -> str | None:
     try:
         client = get_async_client()
         response = await client.get(url + "/statistics")
@@ -18,7 +20,7 @@ async def statistics_url_exist(url: str) -> str | None:
 
 async def limited_statistics_url_exist(url: str) -> str | None:
     async with asyncio.Semaphore(5):
-        return await statistics_url_exist(url)
+        return await statistics_url_exists(url)
 
 
 async def evaluate_urls_statistics(link_list: list[dict]) -> dict:
@@ -38,9 +40,7 @@ async def evaluate_urls_statistics(link_list: list[dict]) -> dict:
 async def evaluate_statistics(
     statistics_schema: StatisticsSchema, link_list: list[dict]
 ) -> tuple[dict, list[dict]]:
-    statistics_resume = get_schema_resume(statistics_schema.dict())
+    statistics_resume = get_schema_resume(statistics_schema.model_dump())
     statistics_resume["url_statistics"] = await evaluate_urls_statistics(link_list)
-    statistics_resume["total"] = sum(
-        v["value"] if isinstance(v, dict) else v for v in statistics_resume.values()
-    )
+    statistics_resume["total"] = sum_resume(statistics_resume)
     return statistics_resume, link_list

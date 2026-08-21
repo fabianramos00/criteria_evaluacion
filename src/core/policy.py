@@ -1,5 +1,5 @@
 # from src.config.settings import settings
-from src.core.tools import get_schema_resume  # is_similar
+from src.core.tools import get_schema_resume, sum_resume
 from src.api.schemas import PolicySchema
 # import asyncio
 # from playwright.async_api import async_playwright
@@ -43,7 +43,5 @@ async def evaluate_policy(repository_name_list: list[str], policy_schema: Policy
     policy_resume = get_schema_resume(policy_schema.model_dump())
     # boai_score, boai_repository = await get_boai_score(repository_name_list)
     # policy_resume["boai"] = {"value": boai_score, "name": boai_repository}
-    policy_resume["total"] = sum(
-        v["value"] if isinstance(v, dict) else v for v in policy_resume.values()
-    )
+    policy_resume["total"] = sum_resume(policy_resume)
     return policy_resume

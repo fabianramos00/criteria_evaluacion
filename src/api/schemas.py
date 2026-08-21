@@ -1,8 +1,9 @@
 from uuid import UUID
-from typing import Optional
 from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, AnyHttpUrl, field_validator, Field
 from pydantic_core import PydanticCustomError
+
 from src.core.tools import check_website
 
 
@@ -13,7 +14,7 @@ def validate_website_url(v):
     return v
 
 
-def validate_url_contains(url: str, base_url: Optional[str]) -> str:
+def validate_url_contains(url: str, base_url: str | None) -> str:
     """Validate that url contains base_url"""
     if base_url is not None and base_url not in url:
         raise ValueError("The URL entered does not match the repository URL")
@@ -51,6 +52,11 @@ def combined_validator(*validators):
         return v
 
     return validator
+
+
+def required_url(condition_field: str):
+    """Require a URL and check it contains the repository URL when condition is true"""
+    return combined_validator(conditional_required(condition_field), url_must_contain())
 
 
 class RegistrationSchema(BaseModel):
@@ -93,7 +99,7 @@ class VisibilitySchema(BaseModel):
     )
 
     @property
-    def collector_urls(self) -> list[AnyHttpUrl] | None:
+    def collector_urls(self) -> list[str] | None:
         if not self.national_collector:
             return None
         return [
@@ -153,17 +159,15 @@ class PolicySchema(BaseModel):
     )
 
     _validate_action_policy = field_validator("action_policy_url")(
-        combined_validator(conditional_required("action_policy"), url_must_contain())
+        required_url("action_policy")
     )
     _validate_policy_data = field_validator("policy_data_url")(
-        combined_validator(conditional_required("policy_data"), url_must_contain())
+        required_url("policy_data")
     )
     _validate_vision_mission = field_validator("vision_mission_url")(
-        combined_validator(conditional_required("vision_mission"), url_must_contain())
+        required_url("vision_mission")
     )
-    _validate_contact = field_validator("contact_url")(
-        combined_validator(conditional_required("contact"), url_must_contain())
-    )
+    _validate_contact = field_validator("contact_url")(required_url("contact"))
 
 
 class LegalAspectsSchema(BaseModel):
@@ -209,12 +213,8 @@ class SecuritySchema(BaseModel):
     _validate_urls = field_validator("backups_url", "checksum_url")(
         validate_website_url
     )
-    _validate_backups = field_validator("backups_url")(
-        combined_validator(conditional_required("backups"), url_must_contain())
-    )
-    _validate_checksum = field_validator("checksum_url")(
-        combined_validator(conditional_required("checksum"), url_must_contain())
-    )
+    _validate_backups = field_validator("backups_url")(required_url("backups"))
+    _validate_checksum = field_validator("checksum_url")(required_url("checksum"))
 
 
 class StatisticsSchema(BaseModel):
@@ -226,9 +226,7 @@ class StatisticsSchema(BaseModel):
 
     _validate_url = field_validator("general_statistics_url")(validate_website_url)
     _validate_required = field_validator("general_statistics_url")(
-        combined_validator(
-            conditional_required("general_statistics"), url_must_contain()
-        )
+        required_url("general_statistics")
     )
 
 
@@ -246,13 +244,13 @@ class ServicesSchema(BaseModel):
         "author_profiles_url", "cite_metrics_url", "new_metrics_url"
     )(validate_website_url)
     _validate_author_profiles = field_validator("author_profiles_url")(
-        combined_validator(conditional_required("author_profiles"), url_must_contain())
+        required_url("author_profiles")
     )
     _validate_cite_metrics = field_validator("cite_metrics_url")(
-        combined_validator(conditional_required("cite_metrics"), url_must_contain())
+        required_url("cite_metrics")
     )
     _validate_new_metrics = field_validator("new_metrics_url")(
-        combined_validator(conditional_required("new_metrics"), url_must_contain())
+        required_url("new_metrics")
     )
 
 

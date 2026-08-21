@@ -1,7 +1,7 @@
 [project]
 name = "criteria-evaluacion"
 version = "0.1.0"
-description = "Add your description here"
+description = "API for evaluating repository compliance across eight criteria areas"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
