@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["*"]
     CORS_METHODS: list[str] = ["GET", "POST", "PUT", "DELETE"]
     CORS_HEADERS: list[str] = ["Authorization", "Content-Type"]
+    CORS_ALLOW_CREDENTIALS: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
 
