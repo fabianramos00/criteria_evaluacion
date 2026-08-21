@@ -40,7 +40,7 @@ from src.api.schemas import PolicySchema
 
 
 async def evaluate_policy(repository_name_list: list[str], policy_schema: PolicySchema):
-    policy_resume = get_schema_resume(policy_schema.dict())
+    policy_resume = get_schema_resume(policy_schema.model_dump())
     # boai_score, boai_repository = await get_boai_score(repository_name_list)
     # policy_resume["boai"] = {"value": boai_score, "name": boai_repository}
     policy_resume["total"] = sum(

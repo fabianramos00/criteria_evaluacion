@@ -26,7 +26,7 @@ def evaluate_items(links: list[dict], items_dict: dict) -> dict:
 
 
 def evaluate_services(services_schema: ServicesSchema, link_list: list[dict]) -> dict:
-    services_resume = get_schema_resume(services_schema.dict())
+    services_resume = get_schema_resume(services_schema.model_dump())
     evaluated_items = evaluate_items(
         link_list,
         {

@@ -221,7 +221,7 @@ async def limited_get_metadata(link: dict) -> dict | None:
 async def evaluate_metadata(
     metadata_schema: MetadataSchema, link_list: list[dict]
 ) -> tuple[dict, list[dict]]:
-    metadata_resume = get_schema_resume(metadata_schema.dict())
+    metadata_resume = get_schema_resume(metadata_schema.model_dump())
     new_link_list = await asyncio.gather(
         *(limited_get_metadata(link) for link in link_list)
     )

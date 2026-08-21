@@ -41,7 +41,7 @@ def evaluate_interoperability(
     interoperability_schema: InteroperabilitySchema, record: Record
 ) -> dict:
     data = record.data
-    interoperability_resume = get_schema_resume(interoperability_schema.dict())
+    interoperability_resume = get_schema_resume(interoperability_schema.model_dump())
     interoperability_resume["collector"] = check_collectors(
         data["visibility"]["collector"]["details"]
     )
