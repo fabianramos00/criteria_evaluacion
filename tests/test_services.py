@@ -64,6 +64,66 @@ class TestGetRecordById:
         result = await get_record_by_id(mock_db, "non-existent")
         assert result is None
 
+    @pytest.mark.asyncio
+    async def test_for_update_locks_row(self, mocker):
+        mock_query = MagicMock()
+        mock_query.filter_by.return_value = mock_query
+        mock_query.with_for_update.return_value = mock_query
+        mocker.patch("src.api.services.select", return_value=mock_query)
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.first.return_value = MagicMock()
+        mock_db = AsyncMock()
+        mock_db.execute = AsyncMock(return_value=mock_result)
+
+        await get_record_by_id(mock_db, "test-id", for_update=True)
+
+        mock_query.with_for_update.assert_called_once_with()
+
+    @pytest.mark.asyncio
+    async def test_read_path_has_no_row_lock(self, mocker):
+        mock_query = MagicMock()
+        mock_query.filter_by.return_value = mock_query
+        mock_query.with_for_update.return_value = mock_query
+        mocker.patch("src.api.services.select", return_value=mock_query)
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.first.return_value = MagicMock()
+        mock_db = AsyncMock()
+        mock_db.execute = AsyncMock(return_value=mock_result)
+
+        await get_record_by_id(mock_db, "test-id")
+
+        mock_query.with_for_update.assert_not_called()
+
+
+class TestGetRecordOr404:
+    @pytest.mark.asyncio
+    async def test_mutation_dependency_requests_row_lock(self, mocker):
+        from src.api.routes import get_record_or_404
+
+        mock_get = mocker.patch(
+            "src.api.routes.get_record_by_id",
+            new=AsyncMock(return_value=MagicMock()),
+        )
+
+        dependency = get_record_or_404(for_update=True)
+        await dependency("token", db=MagicMock())
+
+        mock_get.assert_awaited_once_with(mocker.ANY, "token", for_update=True)
+
+    @pytest.mark.asyncio
+    async def test_read_dependency_has_no_row_lock(self, mocker):
+        from src.api.routes import get_record_or_404
+
+        mock_get = mocker.patch(
+            "src.api.routes.get_record_by_id",
+            new=AsyncMock(return_value=MagicMock()),
+        )
+
+        dependency = get_record_or_404()
+        await dependency("token", db=MagicMock())
+
+        mock_get.assert_awaited_once_with(mocker.ANY, "token", for_update=False)
+
 
 class TestCreateRecord:
     @pytest.mark.asyncio

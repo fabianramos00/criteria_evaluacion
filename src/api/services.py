@@ -12,9 +12,14 @@ from src.constants import CRITERIA_LIST
 logger = logging.getLogger(__name__)
 
 
-async def get_record_by_id(db: AsyncSession, record_id: str) -> Record | None:
+async def get_record_by_id(
+    db: AsyncSession, record_id: str, for_update: bool = False
+) -> Record | None:
     try:
-        result = await db.execute(select(Record).filter_by(id=record_id))
+        query = select(Record).filter_by(id=record_id)
+        if for_update:
+            query = query.with_for_update()
+        result = await db.execute(query)
         return result.scalars().first()
     except Exception:
         logger.exception("Error getting record %s", record_id)

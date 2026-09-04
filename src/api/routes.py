@@ -35,13 +35,16 @@ from src.constants import CRITERIA_LIST, CRITERIA_LIST_RATINGS
 router = APIRouter()
 
 
-async def get_record_or_404(token: str, db: AsyncSession = Depends(get_db)) -> Record:
-    if not token:
-        raise HTTPException(status_code=400, detail="Token required")
-    record = await get_record_by_id(db, token)
-    if not record:
-        raise HTTPException(status_code=404, detail="Invalid token")
-    return record
+def get_record_or_404(for_update: bool = False):
+    async def dependency(token: str, db: AsyncSession = Depends(get_db)) -> Record:
+        if not token:
+            raise HTTPException(status_code=400, detail="Token required")
+        record = await get_record_by_id(db, token, for_update=for_update)
+        if not record:
+            raise HTTPException(status_code=404, detail="Invalid token")
+        return record
+
+    return dependency
 
 
 def last_criterion_index(record: Record) -> int:
@@ -72,7 +75,7 @@ async def visibility(
     token: str,
     visibility_schema: VisibilitySchema,
     db: AsyncSession = Depends(get_db),
-    record: Record = Depends(get_record_or_404),
+    record: Record = Depends(get_record_or_404(for_update=True)),
 ) -> dict:
     await visibility_schema.validate_async()
     existing_result = check_workflow(record, 0)
@@ -87,7 +90,7 @@ async def policy(
     token: str,
     policy_schema: PolicySchema,
     db: AsyncSession = Depends(get_db),
-    record: Record = Depends(get_record_or_404),
+    record: Record = Depends(get_record_or_404(for_update=True)),
 ) -> dict:
     await policy_schema.validate_async()
     existing_result = check_workflow(record, 1)
@@ -102,7 +105,7 @@ async def legal_aspects(
     token: str,
     legal_aspects_schema: LegalAspectsSchema,
     db: AsyncSession = Depends(get_db),
-    record: Record = Depends(get_record_or_404),
+    record: Record = Depends(get_record_or_404(for_update=True)),
 ) -> dict:
     await legal_aspects_schema.validate_async()
     existing_result = check_workflow(record, 2)
@@ -117,7 +120,7 @@ async def metadata(
     token: str,
     metadata_schema: MetadataSchema,
     db: AsyncSession = Depends(get_db),
-    record: Record = Depends(get_record_or_404),
+    record: Record = Depends(get_record_or_404(for_update=True)),
 ) -> dict:
     await metadata_schema.validate_async()
     existing_result = check_workflow(record, 3)
@@ -132,7 +135,7 @@ async def interoperability(
     token: str,
     interoperability_schema: InteroperabilitySchema,
     db: AsyncSession = Depends(get_db),
-    record: Record = Depends(get_record_or_404),
+    record: Record = Depends(get_record_or_404(for_update=True)),
 ) -> dict:
     await interoperability_schema.validate_async()
     existing_result = check_workflow(record, 4)
@@ -147,7 +150,7 @@ async def security(
     token: str,
     security_schema: SecuritySchema,
     db: AsyncSession = Depends(get_db),
-    record: Record = Depends(get_record_or_404),
+    record: Record = Depends(get_record_or_404(for_update=True)),
 ) -> dict:
     await security_schema.validate_async()
     existing_result = check_workflow(record, 5)
@@ -162,7 +165,7 @@ async def statistics(
     token: str,
     statistics_schema: StatisticsSchema,
     db: AsyncSession = Depends(get_db),
-    record: Record = Depends(get_record_or_404),
+    record: Record = Depends(get_record_or_404(for_update=True)),
 ) -> dict:
     await statistics_schema.validate_async()
     existing_result = check_workflow(record, 6)
@@ -177,7 +180,7 @@ async def services(
     token: str,
     services_schema: ServicesSchema,
     db: AsyncSession = Depends(get_db),
-    record: Record = Depends(get_record_or_404),
+    record: Record = Depends(get_record_or_404(for_update=True)),
 ) -> dict:
     await services_schema.validate_async()
     existing_result = check_workflow(record, 7)
@@ -192,7 +195,7 @@ async def get_data(
     item: str,
     token: str,
     db: AsyncSession = Depends(get_db),
-    record: Record = Depends(get_record_or_404),
+    record: Record = Depends(get_record_or_404()),
 ) -> JSONResponse | dict:
     try:
         item_index = CRITERIA_LIST.index(item)
@@ -234,7 +237,7 @@ async def get_list(
 
 @router.get("/summary/{token}", response_model=None)
 async def get_summary(
-    token: str, record: Record = Depends(get_record_or_404)
+    token: str, record: Record = Depends(get_record_or_404())
 ) -> JSONResponse | dict:
     if not record.is_completed:
         return JSONResponse(
