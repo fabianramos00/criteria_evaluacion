@@ -18,8 +18,11 @@ async def statistics_url_exists(url: str) -> str | None:
         return None
 
 
+_CONCURRENCY_LIMIT = asyncio.Semaphore(5)
+
+
 async def limited_statistics_url_exist(url: str) -> str | None:
-    async with asyncio.Semaphore(5):
+    async with _CONCURRENCY_LIMIT:
         return await statistics_url_exists(url)
 
 

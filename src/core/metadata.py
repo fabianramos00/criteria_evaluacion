@@ -214,8 +214,11 @@ def evaluate_metadata_group(metadata_dict: dict, fields: list[str]) -> dict:
     return {"value": value, "details": details}
 
 
+_CONCURRENCY_LIMIT = asyncio.Semaphore(5)
+
+
 async def limited_get_metadata(link: dict) -> dict | None:
-    async with asyncio.Semaphore(5):
+    async with _CONCURRENCY_LIMIT:
         return await get_metadata(link)
 
 

@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from unittest.mock import AsyncMock
 from bs4 import BeautifulSoup
@@ -215,3 +217,25 @@ class TestLimitedGetMetadata:
 
         result = await limited_get_metadata(link_dict)
         assert result == link_dict
+
+    @pytest.mark.asyncio
+    async def test_limited_get_metadata_bounds_concurrency(self, mocker):
+        max_concurrent = 0
+        current = 0
+
+        async def slow_fetch(link):
+            nonlocal max_concurrent, current
+            current += 1
+            max_concurrent = max(max_concurrent, current)
+            await asyncio.sleep(0.01)
+            current -= 1
+            return link
+
+        mocker.patch("src.core.metadata.get_metadata", side_effect=slow_fetch)
+        mocker.patch("src.core.metadata._CONCURRENCY_LIMIT", asyncio.Semaphore(5))
+
+        links = [{"url": f"https://example.com/{i}"} for i in range(20)]
+        results = await asyncio.gather(*(limited_get_metadata(link) for link in links))
+
+        assert len(results) == 20
+        assert max_concurrent == 5

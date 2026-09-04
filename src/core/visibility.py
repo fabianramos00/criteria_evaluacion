@@ -334,8 +334,11 @@ async def is_open_access(url: str) -> dict | None:
     return {"url": url, "open_access": is_open, "author_rights": author_rights}
 
 
+_CONCURRENCY_LIMIT = asyncio.Semaphore(5)
+
+
 async def limited_is_open_access(url: str) -> dict | None:
-    async with asyncio.Semaphore(5):
+    async with _CONCURRENCY_LIMIT:
         return await is_open_access(url)
 
 

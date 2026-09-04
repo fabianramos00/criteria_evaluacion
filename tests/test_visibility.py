@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from src.core.visibility import (
@@ -7,11 +9,13 @@ from src.core.visibility import (
     count_national_collectors,
     search_in,
     is_open_access,
+    limited_is_open_access,
     open_access,
     execute_async_search,
 )
 from src.core.statistics import (
     statistics_url_exists,
+    limited_statistics_url_exist,
     evaluate_urls_statistics,
 )
 from src.core.interoperability import (
@@ -131,6 +135,29 @@ class TestVisibilityAsync:
         assert result is None
 
     @pytest.mark.asyncio
+    async def test_limited_is_open_access_bounds_concurrency(self, mocker):
+        max_concurrent = 0
+        current = 0
+
+        async def slow_fetch(url):
+            nonlocal max_concurrent, current
+            current += 1
+            max_concurrent = max(max_concurrent, current)
+            await asyncio.sleep(0.01)
+            current -= 1
+            return {"url": url, "open_access": True, "author_rights": True}
+
+        mocker.patch("src.core.visibility.is_open_access", side_effect=slow_fetch)
+        mocker.patch("src.core.visibility._CONCURRENCY_LIMIT", asyncio.Semaphore(5))
+
+        results = await asyncio.gather(
+            *(limited_is_open_access(f"https://example.com/{i}") for i in range(20))
+        )
+
+        assert len(results) == 20
+        assert max_concurrent == 5
+
+    @pytest.mark.asyncio
     async def test_open_access_all_open(self, mocker):
         visibility_dict = {
             "repo1": {"links": ["https://example.com/1", "https://example.com/2"]},
@@ -241,6 +268,34 @@ class TestStatisticsAsync:
         result = await statistics_url_exists("https://example.com")
 
         assert result is None
+
+    @pytest.mark.asyncio
+    async def test_limited_statistics_url_exist_bounds_concurrency(self, mocker):
+        max_concurrent = 0
+        current = 0
+
+        async def slow_fetch(url):
+            nonlocal max_concurrent, current
+            current += 1
+            max_concurrent = max(max_concurrent, current)
+            await asyncio.sleep(0.01)
+            current -= 1
+            return url + "/statistics"
+
+        mocker.patch(
+            "src.core.statistics.statistics_url_exists", side_effect=slow_fetch
+        )
+        mocker.patch("src.core.statistics._CONCURRENCY_LIMIT", asyncio.Semaphore(5))
+
+        results = await asyncio.gather(
+            *(
+                limited_statistics_url_exist(f"https://example.com/{i}")
+                for i in range(20)
+            )
+        )
+
+        assert len(results) == 20
+        assert max_concurrent == 5
 
     @pytest.mark.asyncio
     async def test_evaluate_urls_statistics_empty(self):
